@@ -1,0 +1,88 @@
+# Docker Development Skill
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Claude Code Compatible](https://img.shields.io/badge/Claude%20Code-Compatible-blue)](https://claude.ai/claude-code)
+
+Agent Skill for Docker image development - Dockerfile best practices, CI testing patterns, and Docker Compose orchestration.
+
+## Features
+
+- **Dockerfile Best Practices** - Multi-stage builds, layer optimization, security
+- **CI Testing Patterns** - Test Docker images reliably in CI pipelines
+- **Docker Compose** - Service orchestration, health checks, networking
+- **Security** - Vulnerability scanning, non-root users, secret management
+
+## Installation
+
+### Claude Code (Recommended)
+
+```bash
+claude mcp add-skill netresearch/docker-development-skill
+```
+
+### Manual
+
+Copy `skills/docker-development/SKILL.md` to your Claude Code skills directory.
+
+## Usage
+
+The skill activates automatically when working on:
+- Dockerfile development
+- Docker Compose configurations
+- CI/CD pipelines for container images
+- Container troubleshooting
+
+### Example Prompts
+
+- "Create a multi-stage Dockerfile for a Node.js app"
+- "Set up GitHub Actions to build and push Docker images"
+- "Why is my nginx config test failing in CI?"
+- "Add health checks to my docker-compose.yml"
+
+## Key Patterns
+
+### Testing Images with Entrypoints
+
+```bash
+# Bypass entrypoint for direct testing
+docker run --rm --entrypoint php myimage -v
+```
+
+### Testing nginx Configs in Isolation
+
+```bash
+# Mock upstream DNS
+docker run --rm --add-host backend:127.0.0.1 nginx-image nginx -t
+```
+
+### Compose Validation in CI
+
+```bash
+# Create .env before validation
+cp .env.example .env
+sed -i 's/PLACEHOLDER/test_value/g' .env
+docker compose config > /dev/null
+```
+
+## References
+
+Extended documentation in `skills/docker-development/references/`:
+
+- `dockerfile-patterns.md` - Advanced Dockerfile techniques
+- `compose-patterns.md` - Docker Compose orchestration
+- `ci-testing.md` - Comprehensive CI testing patterns
+- `security.md` - Container security hardening
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request
+
+## License
+
+MIT License - see [LICENSE](LICENSE)
+
+## Author
+
+[Netresearch DTT GmbH](https://www.netresearch.de)
