@@ -1,6 +1,16 @@
 ---
 name: docker-development
-description: "Agent Skill: Docker image development patterns - Dockerfile best practices, CI testing, compose orchestration. By Netresearch."
+description: "This skill should be used when working with Dockerfile, docker-compose.yml, compose.yml, docker-bake.hcl, .dockerignore, or any container image development. Covers Dockerfile best practices, CI testing patterns, and Docker Compose orchestration. By Netresearch."
+globs:
+  - "**/Dockerfile"
+  - "**/Dockerfile.*"
+  - "**/*.dockerfile"
+  - "**/docker-compose.yml"
+  - "**/docker-compose.*.yml"
+  - "**/compose.yml"
+  - "**/compose.*.yml"
+  - "**/docker-bake.hcl"
+  - "**/.dockerignore"
 ---
 
 # Docker Development Skill
@@ -9,11 +19,13 @@ Production-grade patterns for building, testing, and deploying Docker container 
 
 ## When to Use
 
-- Building custom Docker images (Dockerfile development)
-- Setting up CI/CD for container image builds
-- Testing Docker images in CI pipelines
-- Creating Docker Compose stacks for applications
-- Troubleshooting container build or runtime issues
+This skill activates when working with:
+
+- **Dockerfile** - Building custom container images
+- **docker-compose.yml / compose.yml** - Multi-container orchestration
+- **docker-bake.hcl** - BuildKit bake files for multi-platform builds
+- **.dockerignore** - Build context optimization
+- **CI/CD pipelines** - Testing and publishing container images
 
 ## Core Principles
 
@@ -69,13 +81,39 @@ ENV APP_PORT=8080
 EXPOSE $APP_PORT
 ```
 
+## Docker Bake (BuildKit)
+
+For multi-platform builds, use `docker-bake.hcl`:
+
+```hcl
+group "default" {
+  targets = ["app"]
+}
+
+target "app" {
+  dockerfile = "Dockerfile"
+  platforms = ["linux/amd64", "linux/arm64"]
+  tags = ["myapp:latest"]
+  cache-from = ["type=gha"]
+  cache-to = ["type=gha,mode=max"]
+}
+
+target "app-dev" {
+  inherits = ["app"]
+  target = "development"
+  tags = ["myapp:dev"]
+}
+```
+
+Build with: `docker buildx bake`
+
 ## Testing Docker Images in CI
 
 **Critical patterns learned from production failures:**
 
 ### 1. Bypass Entrypoint for Direct Testing
 
-When images have entrypoint scripts, they execute before your test command:
+When images have entrypoint scripts, they execute before any test command:
 
 ```yaml
 # WRONG - entrypoint runs, interferes with test
@@ -125,6 +163,8 @@ Documentation legitimately references placeholder passwords:
       exit 1
     fi
 ```
+
+For comprehensive CI testing patterns, see `references/ci-testing.md`.
 
 ## Docker Compose Patterns
 
@@ -230,9 +270,42 @@ jobs:
     severity: 'CRITICAL,HIGH'
 ```
 
+## .dockerignore Best Practices
+
+Always create `.dockerignore` to optimize build context:
+
+```
+# Version control
+.git
+.gitignore
+
+# Dependencies (rebuild in container)
+node_modules
+vendor
+__pycache__
+
+# IDE and editor files
+.idea
+.vscode
+*.swp
+
+# Test and documentation
+tests
+docs
+*.md
+!README.md
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# Local environment
+.env
+.env.*
+!.env.example
+docker-compose.override.yml
+```
+
 ## References
 
-- `references/dockerfile-patterns.md` - Advanced Dockerfile techniques
-- `references/compose-patterns.md` - Docker Compose orchestration
-- `references/ci-testing.md` - Comprehensive CI testing patterns
-- `references/security.md` - Container security hardening
+- `references/ci-testing.md` - Comprehensive CI testing patterns for Docker images

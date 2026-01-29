@@ -10,7 +10,19 @@ Agent Skill for Docker image development - Dockerfile best practices, CI testing
 - **Dockerfile Best Practices** - Multi-stage builds, layer optimization, security
 - **CI Testing Patterns** - Test Docker images reliably in CI pipelines
 - **Docker Compose** - Service orchestration, health checks, networking
+- **Docker Bake** - Multi-platform builds with BuildKit
 - **Security** - Vulnerability scanning, non-root users, secret management
+
+## Automatic Triggers
+
+This skill activates automatically when working with:
+
+| File Pattern | Description |
+|--------------|-------------|
+| `Dockerfile`, `Dockerfile.*`, `*.dockerfile` | Container image definitions |
+| `docker-compose.yml`, `compose.yml` | Multi-container orchestration |
+| `docker-bake.hcl` | BuildKit bake configurations |
+| `.dockerignore` | Build context optimization |
 
 ## Installation
 
@@ -29,6 +41,7 @@ Copy `skills/docker-development/SKILL.md` to your Claude Code skills directory.
 The skill activates automatically when working on:
 - Dockerfile development
 - Docker Compose configurations
+- Docker Bake multi-platform builds
 - CI/CD pipelines for container images
 - Container troubleshooting
 
@@ -38,6 +51,7 @@ The skill activates automatically when working on:
 - "Set up GitHub Actions to build and push Docker images"
 - "Why is my nginx config test failing in CI?"
 - "Add health checks to my docker-compose.yml"
+- "Create a docker-bake.hcl for multi-platform builds"
 
 ## Key Patterns
 
@@ -68,10 +82,7 @@ docker compose config > /dev/null
 
 Extended documentation in `skills/docker-development/references/`:
 
-- `dockerfile-patterns.md` - Advanced Dockerfile techniques
-- `compose-patterns.md` - Docker Compose orchestration
 - `ci-testing.md` - Comprehensive CI testing patterns
-- `security.md` - Container security hardening
 
 ## Contributing
 
