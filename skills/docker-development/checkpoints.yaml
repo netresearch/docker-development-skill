@@ -9,18 +9,21 @@ mechanical:
   - id: DC-01
     type: file_exists
     target: Dockerfile
+    scope: application
     severity: error
     desc: "Dockerfile must exist"
 
   - id: DC-02
     type: file_exists
     target: docker-compose.yml
+    scope: application
     severity: warning
     desc: "docker-compose.yml should exist for local development"
 
   - id: DC-03
     type: file_exists
     target: .dockerignore
+    scope: application
     severity: warning
     desc: ".dockerignore should exist to exclude unnecessary files"
 
@@ -28,6 +31,7 @@ mechanical:
   - id: DC-04
     type: regex
     target: Dockerfile
+    scope: application
     pattern: "FROM .+ AS .+"
     severity: warning
     desc: "Dockerfile should use multi-stage builds"
@@ -35,6 +39,7 @@ mechanical:
   - id: DC-05
     type: regex
     target: Dockerfile
+    scope: application
     pattern: "COPY --from="
     severity: warning
     desc: "Dockerfile should copy artifacts from build stages"
@@ -43,6 +48,7 @@ mechanical:
   - id: DC-06
     type: regex
     target: Dockerfile
+    scope: application
     pattern: "(USER [^r]|useradd|adduser)"
     severity: warning
     desc: "Dockerfile should run as non-root user"
@@ -50,6 +56,7 @@ mechanical:
   - id: DC-07
     type: not_contains
     target: Dockerfile
+    scope: application
     pattern: "USER root"
     severity: warning
     desc: "Dockerfile should not explicitly run as root"
@@ -58,6 +65,7 @@ mechanical:
   - id: DC-08
     type: contains
     target: Dockerfile
+    scope: application
     pattern: "HEALTHCHECK"
     severity: warning
     desc: "Dockerfile should define a HEALTHCHECK instruction"
@@ -65,6 +73,7 @@ mechanical:
   - id: DC-09
     type: regex
     target: docker-compose.yml
+    scope: application
     pattern: "healthcheck:"
     severity: warning
     desc: "docker-compose.yml should define healthcheck for services"
@@ -73,6 +82,7 @@ mechanical:
   - id: DC-10
     type: not_contains
     target: Dockerfile
+    scope: application
     pattern: "ENV.*PASSWORD"
     severity: error
     desc: "Dockerfile must not contain hardcoded passwords in ENV"
@@ -80,6 +90,7 @@ mechanical:
   - id: DC-11
     type: not_contains
     target: Dockerfile
+    scope: application
     pattern: "ENV.*SECRET"
     severity: error
     desc: "Dockerfile must not contain hardcoded secrets in ENV"
@@ -87,6 +98,7 @@ mechanical:
   - id: DC-12
     type: not_contains
     target: Dockerfile
+    scope: application
     pattern: "ENV.*API_KEY"
     severity: error
     desc: "Dockerfile must not contain hardcoded API keys in ENV"
@@ -94,6 +106,7 @@ mechanical:
   - id: DC-13
     type: not_contains
     target: Dockerfile
+    scope: application
     pattern: "ARG.*PASSWORD"
     severity: warning
     desc: "Dockerfile should not pass passwords as build args"
@@ -102,6 +115,7 @@ mechanical:
   - id: DC-14
     type: contains
     target: .dockerignore
+    scope: application
     pattern: ".git"
     severity: warning
     desc: ".dockerignore should exclude .git directory"
@@ -109,6 +123,7 @@ mechanical:
   - id: DC-15
     type: contains
     target: .dockerignore
+    scope: application
     pattern: "node_modules"
     severity: info
     desc: ".dockerignore should exclude node_modules if applicable"
@@ -116,6 +131,7 @@ mechanical:
   - id: DC-16
     type: regex
     target: Dockerfile
+    scope: application
     pattern: "LABEL.*maintainer|MAINTAINER"
     severity: info
     desc: "Dockerfile should have maintainer information"
@@ -123,6 +139,7 @@ mechanical:
   - id: DC-17
     type: not_contains
     target: Dockerfile
+    scope: application
     pattern: ":latest"
     severity: warning
     desc: "Dockerfile should pin base image versions, not use :latest"
