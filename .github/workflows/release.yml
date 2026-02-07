@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@5ef0c079ce82195b2a36a210272d6b661572d83e # v2.14.2
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Get version from tag
+        id: version
+        run: echo "version=${{GITHUB_REF#refs/tags/}}" >> $GITHUB_OUTPUT
+
+      - name: Create docker-development skill package
+        run: |
+          mkdir -p dist-skill
+          cp skills/docker-development/SKILL.md dist-skill/
+          cp LICENSE dist-skill/
+          [ -d "skills/docker-development/references" ] && cp -r skills/docker-development/references dist-skill/
+          [ -d "skills/docker-development/scripts" ] && cp -r skills/docker-development/scripts dist-skill/
+          [ -d "skills/docker-development/assets" ] && cp -r skills/docker-development/assets dist-skill/
+          [ -d "skills/docker-development/templates" ] && cp -r skills/docker-development/templates dist-skill/
+          [ -d "skills/docker-development/examples" ] && cp -r skills/docker-development/examples dist-skill/
+          [ -f "skills/docker-development/checkpoints.yaml" ] && cp skills/docker-development/checkpoints.yaml dist-skill/
+          cd dist-skill
+          zip -r ../docker-development-skill-${{ steps.version.outputs.version }}.zip .
+          tar -czvf ../docker-development-skill-${{ steps.version.outputs.version }}.tar.gz .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2.5.0
+        with:
+          files: |
+            docker-development-skill-${{ steps.version.outputs.version }}.zip
+            docker-development-skill-${{ steps.version.outputs.version }}.tar.gz
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
