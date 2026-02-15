@@ -92,6 +92,59 @@ These patterns prevent common failures:
 
 See `references/ci-testing.md` for comprehensive CI testing patterns.
 
+## .dockerignore Best Practices
+
+A well-configured `.dockerignore` reduces build context size, speeds up builds, and prevents secrets from leaking into images.
+
+### Key Patterns to Exclude
+
+```
+# Version control
+.git
+.gitignore
+
+# Dependencies (rebuilt in container)
+node_modules
+vendor
+
+# Build artifacts
+dist
+build
+*.o
+*.pyc
+__pycache__
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+
+# CI/CD and config
+.github
+.gitlab-ci.yml
+docker-compose*.yml
+Makefile
+
+# Documentation
+*.md
+LICENSE
+docs
+
+# Secrets and environment
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+```
+
+### Rules
+
+1. **Always exclude `.git`** -- it can be 10x+ the source size and leaks history
+2. **Exclude dependency dirs** (`node_modules`, `vendor`) -- they get rebuilt via `RUN npm ci` / `RUN composer install`
+3. **Exclude secrets** (`.env`, `*.pem`, `*.key`) -- even if a later stage drops them, they persist in layer history
+4. **Keep it in sync** -- when adding new top-level dirs, check if `.dockerignore` needs updating
+
 ## Compose Essentials
 
 - Use `depends_on` with `condition: service_healthy` for startup ordering
