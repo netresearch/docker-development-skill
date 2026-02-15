@@ -1,6 +1,6 @@
 ---
 name: docker-development
-description: "This skill should be used when working with Dockerfile, docker-compose.yml, compose.yml, docker-bake.hcl, .dockerignore, or any container image development. Covers Dockerfile best practices, CI testing patterns, and Docker Compose orchestration. By Netresearch."
+description: "Use when working with Dockerfiles, docker-compose, docker-bake.hcl, or container CI pipelines. Covers image building, testing patterns, and orchestration."
 globs:
   - "**/Dockerfile"
   - "**/Dockerfile.*"
@@ -13,39 +13,35 @@ globs:
   - "**/.dockerignore"
 ---
 
-# Docker Development Skill
+# Docker Development
 
 Production-grade patterns for building, testing, and deploying Docker container images.
 
 ## When to Use
 
-This skill activates when working with:
-
-- **Dockerfile** - Building custom container images
-- **docker-compose.yml / compose.yml** - Multi-container orchestration
-- **docker-bake.hcl** - BuildKit bake files for multi-platform builds
-- **.dockerignore** - Build context optimization
-- **CI/CD pipelines** - Testing and publishing container images
+- Writing or reviewing Dockerfiles
+- Configuring docker-compose.yml / compose.yml
+- Setting up docker-bake.hcl for multi-platform builds
+- Testing container images in CI/CD pipelines
+- Optimizing .dockerignore and build context
 
 ## Core Principles
 
-1. **Minimal images** - Use Alpine/distroless, multi-stage builds
-2. **Security first** - Non-root users, no secrets in layers
-3. **Testable** - Images must be verifiable in CI
-4. **Reproducible** - Pin versions, use checksums
+1. **Minimal images** -- Use Alpine/distroless, multi-stage builds
+2. **Security first** -- Non-root users, no secrets in layers
+3. **Testable** -- Images must be verifiable in CI
+4. **Reproducible** -- Pin versions, use checksums
 
-## Dockerfile Best Practices
+## Quick Reference
 
-### Multi-Stage Builds
+### Multi-Stage Build
 
 ```dockerfile
-# Build stage - has build tools
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 
-# Runtime stage - minimal
 FROM node:20-alpine
 RUN addgroup -g 1001 app && adduser -u 1001 -G app -D app
 USER app
@@ -57,11 +53,6 @@ CMD ["node", "server.js"]
 ### Layer Optimization
 
 ```dockerfile
-# Bad - each RUN creates a layer, leaves cache
-RUN apt-get update
-RUN apt-get install -y curl
-RUN apt-get clean
-
 # Good - single layer, cleanup included
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
@@ -69,27 +60,9 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 ```
 
-### Build Arguments vs Environment
-
-```dockerfile
-# Build-time only (not in final image)
-ARG BUILD_VERSION
-RUN echo "Building version ${BUILD_VERSION}"
-
-# Runtime configuration
-ENV APP_PORT=8080
-EXPOSE $APP_PORT
-```
-
-## Docker Bake (BuildKit)
-
-For multi-platform builds, use `docker-bake.hcl`:
+### Docker Bake (Multi-Platform)
 
 ```hcl
-group "default" {
-  targets = ["app"]
-}
-
 target "app" {
   dockerfile = "Dockerfile"
   platforms = ["linux/amd64", "linux/arm64"]
@@ -97,215 +70,35 @@ target "app" {
   cache-from = ["type=gha"]
   cache-to = ["type=gha,mode=max"]
 }
-
-target "app-dev" {
-  inherits = ["app"]
-  target = "development"
-  tags = ["myapp:dev"]
-}
 ```
 
-Build with: `docker buildx bake`
+## CI Testing Gotchas
 
-## Testing Docker Images in CI
+These patterns prevent common failures:
 
-**Critical patterns learned from production failures:**
+1. **Bypass entrypoint for testing** -- Use `--entrypoint` to run commands directly:
+   ```bash
+   docker run --rm --entrypoint php myimage -v
+   ```
 
-### 1. Bypass Entrypoint for Direct Testing
+2. **Mock DNS for upstream servers** -- nginx/haproxy configs fail without resolution:
+   ```bash
+   docker run --rm --add-host backend:127.0.0.1 nginx-image nginx -t
+   ```
 
-When images have entrypoint scripts, they execute before any test command:
+3. **Compose validation with required vars** -- Create `.env` from `.env.example` before `docker compose config`.
 
-```yaml
-# WRONG - entrypoint runs, interferes with test
-- run: docker run --rm myimage php -v
+4. **Secret scanning exclusions** -- Exclude `.env.example`, README, and docs from secret scanners.
 
-# CORRECT - bypass entrypoint for direct command
-- run: docker run --rm --entrypoint php myimage -v
-- run: docker run --rm --entrypoint node myimage --version
-```
+See `references/ci-testing.md` for comprehensive CI testing patterns.
 
-### 2. Mock DNS for Upstream Servers
+## Compose Essentials
 
-nginx/haproxy configs with upstream servers fail `nginx -t` in isolation:
-
-```yaml
-# WRONG - fails with "host not found in upstream"
-- run: docker run --rm nginx-image nginx -t
-
-# CORRECT - provide fake DNS resolution
-- run: docker run --rm --add-host backend:127.0.0.1 nginx-image nginx -t
-```
-
-### 3. Docker Compose Validation
-
-When `compose.yml` uses required variables (`${VAR:?error}`), create `.env` first:
-
-```yaml
-- name: Create test environment
-  run: |
-    cp .env.example .env
-    sed -i 's/CHANGE_ME_PASSWORD/test_ci_password/g' .env
-
-- name: Validate compose syntax
-  run: docker compose config > /dev/null
-```
-
-### 4. Secret Scanning Exclusions
-
-Documentation legitimately references placeholder passwords:
-
-```yaml
-- name: Check for leaked secrets
-  run: |
-    EXCLUDE=".env.example|README|QUICKSTART|docs/"
-    if git ls-files | xargs grep -l "CHANGE_ME" | grep -vE "$EXCLUDE"; then
-      echo "Found secrets in tracked files"
-      exit 1
-    fi
-```
-
-For comprehensive CI testing patterns, see `references/ci-testing.md`.
-
-## Docker Compose Patterns
-
-### Health Checks and Dependencies
-
-```yaml
-services:
-  app:
-    depends_on:
-      database:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 60s  # Grace period for slow startups
-```
-
-### Network Isolation
-
-```yaml
-networks:
-  frontend:
-    name: ${PROJECT}_frontend
-  backend:
-    name: ${PROJECT}_backend
-    internal: true  # No external access
-
-services:
-  nginx:
-    networks: [frontend, backend]  # Bridge
-  app:
-    networks: [frontend, backend]  # Needs internet + internal
-  database:
-    networks: [backend]  # Internal only
-```
-
-### Optional Services with Profiles
-
-```yaml
-services:
-  mailpit:
-    profiles: [dev]  # Only starts with --profile dev
-
-  debug-tools:
-    profiles: [debug]
-```
-
-## CI/CD Workflow Pattern
-
-```yaml
-name: Docker Build
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          load: true  # Load for testing
-          tags: myimage:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # Test the built image
-      - name: Verify image
-        run: |
-          docker run --rm --entrypoint /bin/sh myimage:test -c "echo 'Image works'"
-
-      - uses: docker/login-action@v3
-        if: github.event_name != 'pull_request'
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: docker/build-push-action@v6
-        with:
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/${{ github.repository }}:latest
-```
-
-## Security Scanning
-
-```yaml
-- name: Run Trivy vulnerability scanner
-  uses: aquasecurity/trivy-action@master
-  with:
-    image-ref: myimage:test
-    format: 'table'
-    exit-code: '1'  # Fail on HIGH/CRITICAL
-    severity: 'CRITICAL,HIGH'
-```
-
-## .dockerignore Best Practices
-
-Always create `.dockerignore` to optimize build context:
-
-```
-# Version control
-.git
-.gitignore
-
-# Dependencies (rebuild in container)
-node_modules
-vendor
-__pycache__
-
-# IDE and editor files
-.idea
-.vscode
-*.swp
-
-# Test and documentation
-tests
-docs
-*.md
-!README.md
-
-# CI/CD
-.github
-.gitlab-ci.yml
-
-# Local environment
-.env
-.env.*
-!.env.example
-docker-compose.override.yml
-```
+- Use `depends_on` with `condition: service_healthy` for startup ordering
+- Set `start_period` in healthchecks for slow-starting services
+- Use `internal: true` networks for database isolation
+- Use `profiles` for optional services (dev tools, debug tools)
 
 ## References
 
-- `references/ci-testing.md` - Comprehensive CI testing patterns for Docker images
+- `references/ci-testing.md` -- Comprehensive CI testing patterns for Docker images
