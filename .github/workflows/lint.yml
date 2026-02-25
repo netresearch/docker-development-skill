@@ -54,3 +54,7 @@ jobs:
             fi
             echo "Version format valid"
           fi
+
+  validate:
+    name: Skill Validation
+    uses: netresearch/skill-repo-skill/.github/workflows/validate.yml@main
