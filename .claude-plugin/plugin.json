@@ -17,6 +17,6 @@
     "ci-cd"
   ],
   "skills": [
-    "."
+    "./skills/docker-development"
   ]
 }

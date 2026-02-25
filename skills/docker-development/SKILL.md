@@ -1,16 +1,6 @@
 ---
 name: docker-development
 description: "Use when working with Dockerfiles, docker-compose, docker-bake.hcl, or container CI pipelines. Covers image building, testing patterns, and orchestration."
-globs:
-  - "**/Dockerfile"
-  - "**/Dockerfile.*"
-  - "**/*.dockerfile"
-  - "**/docker-compose.yml"
-  - "**/docker-compose.*.yml"
-  - "**/compose.yml"
-  - "**/compose.*.yml"
-  - "**/docker-bake.hcl"
-  - "**/.dockerignore"
 ---
 
 # Docker Development
