@@ -1,5 +1,8 @@
 {
-  "name": "netresearch/agent-docker-development",
+  "name": "netresearch/docker-development-skill",
+  "replace": {
+    "netresearch/agent-docker-development": "self.version"
+  },
   "description": "Agent Skill: Docker image development patterns - Dockerfile best practices, CI testing, compose orchestration. By Netresearch.",
   "type": "ai-agent-skill",
   "license": "MIT",
