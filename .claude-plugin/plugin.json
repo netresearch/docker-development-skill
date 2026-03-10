@@ -1,22 +1,22 @@
 {
-  "name": "docker-development",
-  "version": "1.2.5",
-  "description": "Docker image development patterns for Dockerfile, docker-compose, docker-bake.hcl, and CI testing",
-  "repository": "https://github.com/netresearch/docker-development-skill",
-  "license": "MIT",
-  "author": {
-    "name": "Netresearch DTT GmbH",
-    "url": "https://www.netresearch.de/"
-  },
-  "keywords": [
-    "docker",
-    "dockerfile",
-    "docker-compose",
-    "docker-bake",
-    "containers",
-    "ci-cd"
-  ],
-  "skills": [
-    "./skills/docker-development"
-  ]
+    "name": "docker-development",
+    "version": "1.2.5",
+    "description": "Docker image development patterns for Dockerfile, docker-compose, docker-bake.hcl, and CI testing",
+    "repository": "https://github.com/netresearch/docker-development-skill",
+    "license": "(MIT AND CC-BY-SA-4.0)",
+    "author": {
+        "name": "Netresearch DTT GmbH",
+        "url": "https://www.netresearch.de/"
+    },
+    "keywords": [
+        "docker",
+        "dockerfile",
+        "docker-compose",
+        "docker-bake",
+        "containers",
+        "ci-cd"
+    ],
+    "skills": [
+        "./skills/docker-development"
+    ]
 }

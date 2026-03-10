@@ -1,37 +1,37 @@
 {
-  "name": "netresearch/docker-development-skill",
-  "replace": {
-    "netresearch/agent-docker-development": "self.version"
-  },
-  "description": "Agent Skill: Docker image development patterns - Dockerfile best practices, CI testing, compose orchestration. By Netresearch.",
-  "type": "ai-agent-skill",
-  "license": "MIT",
-  "authors": [
-    {
-      "name": "Netresearch DTT GmbH",
-      "homepage": "https://www.netresearch.de"
-    }
-  ],
-  "keywords": [
-    "docker",
-    "dockerfile",
-    "docker-compose",
-    "ci-cd",
-    "container",
-    "testing",
-    "agent-skill",
-    "claude-code"
-  ],
-  "homepage": "https://github.com/netresearch/docker-development-skill",
-  "support": {
-    "issues": "https://github.com/netresearch/docker-development-skill/issues",
-    "source": "https://github.com/netresearch/docker-development-skill"
-  },
-  "require": {
-    "netresearch/composer-agent-skill-plugin": "*"
-  },
-  "extra": {
-    "ai-agent-skill": "skills/docker-development/SKILL.md"
-  },
-  "version": "1.2.0"
+    "name": "netresearch/docker-development-skill",
+    "replace": {
+        "netresearch/agent-docker-development": "self.version"
+    },
+    "description": "Agent Skill: Docker image development patterns - Dockerfile best practices, CI testing, compose orchestration. By Netresearch.",
+    "type": "ai-agent-skill",
+    "license": "(MIT AND CC-BY-SA-4.0)",
+    "authors": [
+        {
+            "name": "Netresearch DTT GmbH",
+            "homepage": "https://www.netresearch.de"
+        }
+    ],
+    "keywords": [
+        "docker",
+        "dockerfile",
+        "docker-compose",
+        "ci-cd",
+        "container",
+        "testing",
+        "agent-skill",
+        "claude-code"
+    ],
+    "homepage": "https://github.com/netresearch/docker-development-skill",
+    "support": {
+        "issues": "https://github.com/netresearch/docker-development-skill/issues",
+        "source": "https://github.com/netresearch/docker-development-skill"
+    },
+    "require": {
+        "netresearch/composer-agent-skill-plugin": "*"
+    },
+    "extra": {
+        "ai-agent-skill": "skills/docker-development/SKILL.md"
+    },
+    "version": "1.2.0"
 }
