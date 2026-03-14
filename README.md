@@ -1,6 +1,6 @@
 # Docker Development Skill
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/badge/License-MIT%20%2B%20CC--BY--SA--4.0-blue.svg)](#license)
 [![Claude Code Compatible](https://img.shields.io/badge/Claude%20Code-Compatible-blue)](https://claude.ai/claude-code)
 
 Agent Skill for Docker image development - Dockerfile best practices, CI testing patterns, and Docker Compose orchestration.
