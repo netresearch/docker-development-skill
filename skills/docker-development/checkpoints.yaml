@@ -144,6 +144,54 @@ mechanical:
     severity: warning
     desc: "Dockerfile should pin base image versions, not use :latest"
 
+  # === .DOCKERIGNORE SECURITY ===
+  - id: DC-18
+    type: contains
+    target: .dockerignore
+    scope: application
+    pattern: ".env"
+    severity: warning
+    desc: ".dockerignore should exclude .env files to prevent secret leakage"
+
+  - id: DC-19
+    type: command
+    scope: application
+    pattern: "test -f .dockerignore && grep -qE '\\*\\.pem|\\*\\.key' .dockerignore || true"
+    severity: info
+    desc: ".dockerignore should exclude private key files (*.pem, *.key)"
+
+  # === COMPOSE HEALTH CHECK ORDERING ===
+  - id: DC-24
+    type: command
+    scope: application
+    pattern: "test -f docker-compose.yml && grep -q 'condition:' docker-compose.yml || test -f compose.yml && grep -q 'condition:' compose.yml || true"
+    severity: info
+    desc: "Compose depends_on should use condition: service_healthy for startup ordering"
+
+  # === MODERN COMPOSE FILENAME ===
+  - id: DC-25
+    type: command
+    scope: application
+    pattern: "test -f docker-compose.yml || test -f compose.yml"
+    severity: warning
+    desc: "Docker Compose file should exist (docker-compose.yml or compose.yml)"
+
+  # === LAYER OPTIMIZATION: CLEANUP IN RUN ===
+  - id: DC-26
+    type: command
+    scope: application
+    pattern: "! grep -q 'apt-get install' Dockerfile 2>/dev/null || grep -q 'rm -rf /var/lib/apt/lists' Dockerfile"
+    severity: info
+    desc: "Dockerfile should clean apt cache in the same RUN layer as install"
+
+  # === INTERNAL NETWORKS ===
+  - id: DC-27
+    type: command
+    scope: application
+    pattern: "test -f docker-compose.yml && grep -q 'internal:' docker-compose.yml || test -f compose.yml && grep -q 'internal:' compose.yml || true"
+    severity: info
+    desc: "Compose should use internal networks for database isolation"
+
 llm_reviews:
   # === SUBJECTIVE CHECKS (require LLM judgment) ===
   - id: DC-20
