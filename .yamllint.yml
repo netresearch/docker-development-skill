@@ -3,4 +3,3 @@ rules:
   line-length: disable
   truthy: disable
   document-start: disable
-  comments-indentation: disable
