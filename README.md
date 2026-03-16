@@ -26,16 +26,40 @@ This skill activates automatically when working with:
 
 ## Installation
 
-### Claude Code (Recommended)
+### Marketplace (Recommended)
+
+Add the [Netresearch marketplace](https://github.com/netresearch/claude-code-marketplace) once, then browse and install skills:
 
 ```bash
-claude mcp add-skill netresearch/docker-development-skill
+# Claude Code
+/plugin marketplace add netresearch/claude-code-marketplace
 ```
 
-### Manual
+### npx ([skills.sh](https://skills.sh))
 
-Copy `skills/docker-development/SKILL.md` to your Claude Code skills directory.
+Install with any [Agent Skills](https://agentskills.io)-compatible agent:
 
+```bash
+npx skills add https://github.com/netresearch/docker-development-skill --skill docker-development
+```
+
+### Download Release
+
+Download the [latest release](https://github.com/netresearch/docker-development-skill/releases/latest) and extract to your agent's skills directory.
+
+### Git Clone
+
+```bash
+git clone https://github.com/netresearch/docker-development-skill.git
+```
+
+### Composer (PHP Projects)
+
+```bash
+composer require netresearch/docker-development-skill
+```
+
+Requires [netresearch/composer-agent-skill-plugin](https://github.com/netresearch/composer-agent-skill-plugin).
 ## Usage
 
 The skill activates automatically when working on:
