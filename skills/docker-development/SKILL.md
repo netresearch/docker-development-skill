@@ -1,6 +1,6 @@
 ---
 name: docker-development
-description: "ALWAYS use for ANY Docker task: writing Dockerfiles, configuring docker-compose/compose.yml, multi-stage builds, docker-bake.hcl, container security audits, .dockerignore optimization, or CI/CD container testing. Triggers on: Dockerfile, docker-compose, container, image build, multi-stage, docker bake, compose."
+description: "Use when working with ANY Docker task: writing Dockerfiles, configuring docker-compose/compose.yml, multi-stage builds, docker-bake.hcl, container security audits, .dockerignore optimization, or CI/CD container testing. Triggers on: Dockerfile, docker-compose, container, image build, multi-stage, docker bake, compose."
 license: "(MIT AND CC-BY-SA-4.0)"
 compatibility: "Requires docker, docker compose."
 metadata:
