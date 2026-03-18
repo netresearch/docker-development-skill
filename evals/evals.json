@@ -1,0 +1,34 @@
+[
+  {
+    "name": "create-multistage-dockerfile",
+    "prompt": "Create a multi-stage Dockerfile for this Go app",
+    "assertions": [
+      {
+        "type": "tool_use",
+        "tool": "Glob",
+        "description": "Scans for existing Dockerfile and project structure"
+      },
+      {
+        "type": "content_contains",
+        "value": "FROM",
+        "description": "Generates a multi-stage Dockerfile with FROM stages"
+      }
+    ]
+  },
+  {
+    "name": "audit-docker-compose-security",
+    "prompt": "Audit this docker-compose.yml for security issues",
+    "assertions": [
+      {
+        "type": "tool_use",
+        "tool": "Read",
+        "description": "Reads docker-compose.yml to analyze security"
+      },
+      {
+        "type": "content_contains",
+        "value": "root",
+        "description": "Identifies root user or privilege escalation concerns"
+      }
+    ]
+  }
+]

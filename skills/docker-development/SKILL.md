@@ -1,6 +1,19 @@
 ---
 name: docker-development
-description: "Use when working with Dockerfiles, docker-compose, docker-bake.hcl, or container CI pipelines. Covers image building, testing patterns, and orchestration."
+description: "ALWAYS use for ANY Docker task: writing Dockerfiles, configuring docker-compose/compose.yml, multi-stage builds, docker-bake.hcl, container security audits, .dockerignore optimization, or CI/CD container testing. Triggers on: Dockerfile, docker-compose, container, image build, multi-stage, docker bake, compose."
+license: "(MIT AND CC-BY-SA-4.0)"
+compatibility: "Requires docker, docker compose."
+metadata:
+  version: "1.3.0"
+  repository: "https://github.com/netresearch/docker-development-skill"
+  author: "Netresearch DTT GmbH"
+allowed-tools:
+  - "Bash(docker:*)"
+  - "Bash(grep:*)"
+  - "Read"
+  - "Write"
+  - "Glob"
+  - "Grep"
 ---
 
 # Docker Development
@@ -84,56 +97,10 @@ See `references/ci-testing.md` for comprehensive CI testing patterns.
 
 ## .dockerignore Best Practices
 
-A well-configured `.dockerignore` reduces build context size, speeds up builds, and prevents secrets from leaking into images.
-
-### Key Patterns to Exclude
-
-```
-# Version control
-.git
-.gitignore
-
-# Dependencies (rebuilt in container)
-node_modules
-vendor
-
-# Build artifacts
-dist
-build
-*.o
-*.pyc
-__pycache__
-
-# IDE and editor files
-.vscode
-.idea
-*.swp
-
-# CI/CD and config
-.github
-.gitlab-ci.yml
-docker-compose*.yml
-Makefile
-
-# Documentation
-*.md
-LICENSE
-docs
-
-# Secrets and environment
-.env
-.env.*
-*.pem
-*.key
-credentials.json
-```
-
-### Rules
-
-1. **Always exclude `.git`** -- it can be 10x+ the source size and leaks history
-2. **Exclude dependency dirs** (`node_modules`, `vendor`) -- they get rebuilt via `RUN npm ci` / `RUN composer install`
-3. **Exclude secrets** (`.env`, `*.pem`, `*.key`) -- even if a later stage drops them, they persist in layer history
-4. **Keep it in sync** -- when adding new top-level dirs, check if `.dockerignore` needs updating
+1. **Always exclude `.git`** -- leaks history, 10x+ source size
+2. **Exclude dependency dirs** (`node_modules`, `vendor`) -- rebuilt in container
+3. **Exclude secrets** (`.env`, `*.pem`, `*.key`) -- persist in layer history
+4. **Keep in sync** -- check `.dockerignore` when adding top-level dirs
 
 ## Compose Essentials
 
