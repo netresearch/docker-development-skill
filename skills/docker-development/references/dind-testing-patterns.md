@@ -22,10 +22,13 @@ Configure the **inner** Docker daemon to use the `vfs` storage driver instead of
 # molecule/default/prepare.yml
 - name: Prepare
   hosts: all
-  roles:
-    - role: geerlingguy.docker
-      docker_daemon_options:
-        storage-driver: vfs
+  tasks:
+    - name: Install Docker with VFS driver
+      ansible.builtin.include_role:
+        name: geerlingguy.docker
+      vars:
+        docker_daemon_options:
+          storage-driver: vfs
 ```
 
 ### Direct daemon.json Configuration
@@ -49,7 +52,7 @@ jobs:
       dind:
         image: docker:dind
         env:
-          DOCKER_DRIVER: vfs  # NOT overlay2
+          DOCKER_OPTS: "--storage-driver=vfs"
         options: --privileged
 ```
 
@@ -61,7 +64,7 @@ test:
   services:
     - name: docker:dind
       variables:
-        DOCKER_DRIVER: vfs
+        DOCKER_OPTS: "--storage-driver=vfs"
   variables:
     DOCKER_HOST: tcp://docker:2376
 ```
