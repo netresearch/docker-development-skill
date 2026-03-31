@@ -42,13 +42,13 @@ jobs:
               echo "::error file=AGENTS.md::Dead reference: $ref"
               ERRORS=$((ERRORS + 1))
             fi
-          done < <(grep -oP '\[.*?\]\(\K[^)]+' AGENTS.md 2>/dev/null || true)
+          done < <(sed -n 's/.*\](\([^)]*\)).*/\1/p' AGENTS.md 2>/dev/null || true)
           exit $ERRORS
 
       - name: Verify documented commands
         run: |
           if [ -f Makefile ]; then
-            grep -oP '`make (\w[\w-]*)`' AGENTS.md 2>/dev/null | tr -d '`' | while read -r cmd; do
+            grep -oE '`make [a-zA-Z0-9_][a-zA-Z0-9_-]*`' AGENTS.md 2>/dev/null | tr -d '`' | while read -r cmd; do
               TARGET="${cmd#make }"
               if ! grep -q "^${TARGET}:" Makefile; then
                 echo "::warning file=AGENTS.md::Documented command '$cmd' has no matching Makefile target"
@@ -56,7 +56,7 @@ jobs:
             done
           fi
           if [ -f composer.json ]; then
-            grep -oP '`composer ([\w:.-]+)`' AGENTS.md 2>/dev/null | tr -d '`' | while read -r cmd; do
+            grep -oE '`composer [a-zA-Z0-9:._-]+`' AGENTS.md 2>/dev/null | tr -d '`' | while read -r cmd; do
               SCRIPT="${cmd#composer }"
               if ! python3 -c "import json,sys; d=json.load(open('composer.json')); sys.exit(0 if '$SCRIPT' in d.get('scripts',{}) else 1)" 2>/dev/null; then
                 echo "::warning file=AGENTS.md::Documented command '$cmd' not found in composer.json scripts"
@@ -64,7 +64,7 @@ jobs:
             done
           fi
           if [ -f package.json ]; then
-            grep -oP '`npm run ([\w:.-]+)`' AGENTS.md 2>/dev/null | tr -d '`' | while read -r cmd; do
+            grep -oE '`npm run [a-zA-Z0-9:._-]+`' AGENTS.md 2>/dev/null | tr -d '`' | while read -r cmd; do
               SCRIPT="${cmd#npm run }"
               if ! python3 -c "import json,sys; d=json.load(open('package.json')); sys.exit(0 if '$SCRIPT' in d.get('scripts',{}) else 1)" 2>/dev/null; then
                 echo "::warning file=AGENTS.md::Documented command '$cmd' not found in package.json scripts"
