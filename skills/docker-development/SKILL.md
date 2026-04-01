@@ -18,96 +18,114 @@ allowed-tools:
 
 # Docker Development
 
-Production-grade patterns for building, testing, and deploying Docker container images.
-
-## When to Use
-
-- Writing or reviewing Dockerfiles
-- Configuring docker-compose.yml / compose.yml
-- Setting up docker-bake.hcl for multi-platform builds
-- Testing container images in CI/CD pipelines
-- Optimizing .dockerignore and build context
+Patterns for building, testing, and deploying Docker containers.
 
 ## Core Principles
 
-1. **Minimal images** -- Use Alpine/distroless, multi-stage builds
-2. **Security first** -- Non-root users, no secrets in layers
-3. **Testable** -- Images must be verifiable in CI
-4. **Reproducible** -- Pin versions, use checksums
+1. **Minimal images** -- Alpine/distroless, multi-stage builds
+2. **Security first** -- Non-root USER, no secrets in layers, pin versions
+3. **Testable** -- Verifiable in CI with entrypoint bypass and DNS mocking
+4. **Cache-efficient** -- Copy dependency files first, clean in same layer
 
 ## Quick Reference
 
-### Multi-Stage Build
+### Multi-Stage Build (Node.js)
 
 ```dockerfile
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
+COPY . .
 
 FROM node:20-alpine
 RUN addgroup -g 1001 app && adduser -u 1001 -G app -D app
 USER app
-COPY --from=builder /app/node_modules ./node_modules
-COPY --chown=app:app . .
+COPY --from=builder /app .
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost:3000/health || exit 1
 CMD ["node", "server.js"]
+```
+
+### Multi-Stage Build (Go -- scratch/distroless)
+
+```dockerfile
+FROM golang:1.22-alpine AS builder
+WORKDIR /app
+COPY go.* ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -o /app/server .
+
+FROM gcr.io/distroless/static:nonroot
+COPY --from=builder /app/server /server
+CMD ["/server"]
 ```
 
 ### Layer Optimization
 
 ```dockerfile
-# Good - single layer, cleanup included
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
-    apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 ```
+
+### Build Cache: Copy Dependency Files First
+
+```dockerfile
+COPY package*.json ./
+RUN npm ci
+COPY . .
+```
+
+Dependency manifests before source so install layers stay cached on source-only changes.
+
+### BuildKit Secrets
+
+```dockerfile
+RUN --mount=type=secret,id=ssh_key,dst=/root/.ssh/id_rsa git clone git@github.com:org/repo.git
+```
+
+Secrets in `ENV`/`ARG`/`COPY` persist in layer history (`docker history`). Use `--mount=type=secret`.
 
 ### Docker Bake (Multi-Platform)
 
 ```hcl
 target "app" {
-  dockerfile = "Dockerfile"
   platforms = ["linux/amd64", "linux/arm64"]
-  tags = ["myapp:latest"]
   cache-from = ["type=gha"]
   cache-to = ["type=gha,mode=max"]
 }
 ```
 
+## Security Anti-Patterns
+
+| Anti-pattern | Fix |
+|---|---|
+| `FROM image:latest` | Pin version: `image:1.2.3-alpine` |
+| No `USER` directive | `adduser` + `USER appuser` |
+| `chmod 777` | Use specific permissions: `chmod 550` |
+| `privileged: true` in compose | Remove or use specific `cap_add` |
+| `volumes: [/:/host]` | Mount only needed paths |
+| `ports: ["0.0.0.0:3000:3000"]` | Bind to `127.0.0.1:3000:3000` |
+| `ENV DB_PASSWORD=secret` | Use `--mount=type=secret` or compose secrets |
+
 ## CI Testing Gotchas
 
-These patterns prevent common failures:
+1. **Bypass entrypoint**: `docker run --rm --entrypoint php myimage -v`
+2. **Mock upstream DNS**: `docker run --rm --add-host backend:127.0.0.1 nginx-image nginx -t`
+3. **Compose validation**: `cp .env.example .env` before `docker compose config`
+4. **Secret scanning**: Exclude `.env.example`, README, docs from scanners
 
-1. **Bypass entrypoint for testing** -- Use `--entrypoint` to run commands directly:
-   ```bash
-   docker run --rm --entrypoint php myimage -v
-   ```
+## .dockerignore
 
-2. **Mock DNS for upstream servers** -- nginx/haproxy configs fail without resolution:
-   ```bash
-   docker run --rm --add-host backend:127.0.0.1 nginx-image nginx -t
-   ```
-
-3. **Compose validation with required vars** -- Create `.env` from `.env.example` before `docker compose config`.
-
-4. **Secret scanning exclusions** -- Exclude `.env.example`, README, and docs from secret scanners.
-
-See `references/ci-testing.md` for comprehensive CI testing patterns.
-
-## .dockerignore Best Practices
-
-1. **Always exclude `.git`** -- leaks history, 10x+ source size
-2. **Exclude dependency dirs** (`node_modules`, `vendor`) -- rebuilt in container
-3. **Exclude secrets** (`.env`, `*.pem`, `*.key`) -- persist in layer history
-4. **Keep in sync** -- check `.dockerignore` when adding top-level dirs
+Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 
 ## Compose Essentials
 
-- Use `depends_on` with `condition: service_healthy` for startup ordering
-- Set `start_period` in healthchecks for slow-starting services
-- Use `internal: true` networks for database isolation
-- Use `profiles` for optional services (dev tools, debug tools)
+- `depends_on` with `condition: service_healthy` + `healthcheck` with `start_period` for startup ordering
+- `networks` with `internal: true` for database isolation from external access
+- `profiles: [debug]` for optional services that only start with `--profile debug`
 
 ## References
 

@@ -35,12 +35,13 @@
 ## Rules
 
 1. **Minimal images** — use Alpine or distroless base images with multi-stage builds.
-2. **Security first** — run as non-root user, never bake secrets into layers.
-3. **Testable** — all images must be verifiable in CI; bypass entrypoints for testing.
-4. **Reproducible** — pin dependency versions, use checksums for downloads.
-5. **Layer optimization** — combine RUN commands, clean up in the same layer.
+2. **Security first** — run as non-root USER, never bake secrets into layers, pin versions.
+3. **No security anti-patterns** — no `chmod 777`, no `privileged: true`, no host root mounts, no `0.0.0.0` binding, no secrets in ENV/ARG.
+4. **Cache-efficient** — copy dependency files (package.json, go.mod) before source code; combine RUN commands; clean apt cache in same layer.
+5. **Testable** — all images must be verifiable in CI; bypass entrypoints with `--entrypoint`.
 6. **CI testing**: create `.env` from `.env.example` before `docker compose config`.
 7. **Mock upstream DNS** with `--add-host` when testing nginx configs in isolation.
+8. **BuildKit secrets** — use `--mount=type=secret` for private repos, never `ENV`/`COPY` secrets.
 
 ## References
 

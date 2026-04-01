@@ -1,33 +1,484 @@
 [
   {
-    "name": "create-multistage-dockerfile",
-    "prompt": "Create a multi-stage Dockerfile for this Go app",
+    "name": "create-multistage-dockerfile-node",
+    "prompt": "Create a multi-stage Dockerfile for this Node.js app",
     "assertions": [
       {
-        "type": "tool_use",
-        "tool": "Glob",
-        "description": "Scans for existing Dockerfile and project structure"
+        "type": "content_contains",
+        "value": "AS",
+        "description": "Uses named multi-stage builds with AS keyword"
       },
       {
         "type": "content_contains",
-        "value": "FROM",
-        "description": "Generates a multi-stage Dockerfile with FROM stages"
+        "value": "COPY --from=",
+        "description": "Copies artifacts from builder stage"
+      },
+      {
+        "type": "content_contains",
+        "value": "USER",
+        "description": "Runs as non-root user for security"
+      },
+      {
+        "type": "content_contains",
+        "value": "alpine",
+        "description": "Uses minimal Alpine base image"
       }
     ]
   },
   {
-    "name": "audit-docker-compose-security",
-    "prompt": "Audit this docker-compose.yml for security issues",
+    "name": "create-multistage-dockerfile-go",
+    "prompt": "Create a production Dockerfile for a Go application",
     "assertions": [
       {
-        "type": "tool_use",
-        "tool": "Read",
-        "description": "Reads docker-compose.yml to analyze security"
+        "type": "content_contains",
+        "value": "AS",
+        "description": "Uses named multi-stage builds"
       },
       {
         "type": "content_contains",
-        "value": "root",
-        "description": "Identifies root user or privilege escalation concerns"
+        "value": "COPY --from=",
+        "description": "Copies compiled binary from build stage"
+      },
+      {
+        "type": "content_regex",
+        "value": "scratch|distroless|alpine",
+        "description": "Uses minimal runtime image (scratch, distroless, or alpine)"
+      },
+      {
+        "type": "content_contains",
+        "value": "CGO_ENABLED",
+        "description": "Sets CGO_ENABLED=0 for static linking when using scratch/distroless"
+      }
+    ]
+  },
+  {
+    "name": "dockerfile-security-audit",
+    "prompt": "Audit this Dockerfile for security issues:\n\nFROM ubuntu:latest\nRUN apt-get update && apt-get install -y curl\nENV DB_PASSWORD=secret123\nCOPY . .\nRUN chmod 777 /app\nCMD [\"./app\"]",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "root|non-root|USER",
+        "description": "Identifies missing non-root user"
+      },
+      {
+        "type": "content_regex",
+        "value": "secret|PASSWORD|credential|ENV",
+        "description": "Flags hardcoded secrets in ENV"
+      },
+      {
+        "type": "content_regex",
+        "value": "latest|pin|tag|version",
+        "description": "Flags use of :latest tag instead of pinned version"
+      },
+      {
+        "type": "content_regex",
+        "value": "777|permission|chmod",
+        "description": "Flags overly permissive chmod 777"
+      }
+    ]
+  },
+  {
+    "name": "layer-optimization",
+    "prompt": "This Dockerfile has too many layers and the image is large. Optimize it:\n\nFROM debian:bookworm\nRUN apt-get update\nRUN apt-get install -y curl\nRUN apt-get install -y wget\nRUN apt-get install -y git\nRUN rm -rf /var/lib/apt/lists/*\nCOPY package.json .\nCOPY src/ .\nRUN npm install",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "apt-get update && |&&.*apt-get install",
+        "description": "Combines apt-get update and install into single RUN"
+      },
+      {
+        "type": "content_regex",
+        "value": "rm -rf /var/lib/apt/lists|apt-get clean",
+        "description": "Cleans apt cache in same layer as install"
+      },
+      {
+        "type": "content_contains",
+        "value": "--no-install-recommends",
+        "description": "Uses --no-install-recommends to reduce image size"
+      }
+    ]
+  },
+  {
+    "name": "compose-healthcheck",
+    "prompt": "Add health checks to my docker-compose.yml services. I have a web app on port 3000 and a PostgreSQL database.",
+    "assertions": [
+      {
+        "type": "content_contains",
+        "value": "healthcheck:",
+        "description": "Defines healthcheck configuration"
+      },
+      {
+        "type": "content_regex",
+        "value": "curl|wget|pg_isready",
+        "description": "Uses appropriate health check commands for web and database"
+      },
+      {
+        "type": "content_regex",
+        "value": "interval:|start_period:|timeout:|retries:",
+        "description": "Configures healthcheck timing parameters"
+      },
+      {
+        "type": "content_regex",
+        "value": "condition:|service_healthy",
+        "description": "Uses depends_on with condition: service_healthy for startup ordering"
+      }
+    ]
+  },
+  {
+    "name": "compose-security-audit",
+    "prompt": "Audit this docker-compose.yml for security issues:\n\nservices:\n  app:\n    image: myapp:latest\n    privileged: true\n    volumes:\n      - /:/host\n    environment:\n      - DB_PASSWORD=supersecret\n    ports:\n      - \"0.0.0.0:3000:3000\"\n  db:\n    image: postgres\n    environment:\n      - POSTGRES_PASSWORD=supersecret",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "privileged|privilege",
+        "description": "Flags use of privileged mode"
+      },
+      {
+        "type": "content_regex",
+        "value": "secret|password|plain.?text|environment",
+        "description": "Flags hardcoded passwords in environment variables"
+      },
+      {
+        "type": "content_regex",
+        "value": "/:/host|host.*mount|root.*volume",
+        "description": "Flags dangerous host root volume mount"
+      },
+      {
+        "type": "content_regex",
+        "value": "0\\.0\\.0\\.0|bind|interface|network",
+        "description": "Flags binding to all interfaces"
+      }
+    ]
+  },
+  {
+    "name": "dockerignore-create",
+    "prompt": "Create a .dockerignore for a Node.js project",
+    "assertions": [
+      {
+        "type": "content_contains",
+        "value": ".git",
+        "description": "Excludes .git directory to prevent leaking history"
+      },
+      {
+        "type": "content_contains",
+        "value": "node_modules",
+        "description": "Excludes node_modules (rebuilt in container)"
+      },
+      {
+        "type": "content_regex",
+        "value": "\\.env|\\.env\\*",
+        "description": "Excludes .env files to prevent secret leakage"
+      },
+      {
+        "type": "content_regex",
+        "value": "\\.pem|\\.key",
+        "description": "Excludes private key files"
+      }
+    ]
+  },
+  {
+    "name": "ci-test-nginx-config",
+    "prompt": "My nginx config test keeps failing in GitHub Actions with 'host not found in upstream'. How do I fix this?",
+    "assertions": [
+      {
+        "type": "content_contains",
+        "value": "--add-host",
+        "description": "Uses --add-host to mock DNS for upstream services"
+      },
+      {
+        "type": "content_contains",
+        "value": "127.0.0.1",
+        "description": "Maps upstream hosts to 127.0.0.1 for CI testing"
+      },
+      {
+        "type": "content_contains",
+        "value": "nginx -t",
+        "description": "Uses nginx -t to validate configuration"
+      }
+    ]
+  },
+  {
+    "name": "ci-test-entrypoint-bypass",
+    "prompt": "I need to verify the PHP version inside my Docker image in CI, but the entrypoint script starts services and hangs. How do I just run 'php -v'?",
+    "assertions": [
+      {
+        "type": "content_contains",
+        "value": "--entrypoint",
+        "description": "Uses --entrypoint to bypass the entrypoint script"
+      },
+      {
+        "type": "content_regex",
+        "value": "--entrypoint php|--entrypoint /bin/sh",
+        "description": "Sets entrypoint to php or sh for direct command execution"
+      }
+    ]
+  },
+  {
+    "name": "ci-compose-validation",
+    "prompt": "docker compose config fails in CI because required environment variables are missing. The project has a .env.example with placeholder values.",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "cp.*\\.env\\.example.*\\.env|.env.example",
+        "description": "Creates .env from .env.example before validation"
+      },
+      {
+        "type": "content_regex",
+        "value": "docker compose config|compose config",
+        "description": "Runs docker compose config for validation"
+      }
+    ]
+  },
+  {
+    "name": "docker-bake-multiplatform",
+    "prompt": "Create a docker-bake.hcl for building my app for both amd64 and arm64",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "linux/amd64.*linux/arm64|platforms",
+        "description": "Targets both amd64 and arm64 platforms"
+      },
+      {
+        "type": "content_regex",
+        "value": "target|group",
+        "description": "Defines build targets in HCL format"
+      },
+      {
+        "type": "content_regex",
+        "value": "cache-from|cache-to",
+        "description": "Configures build cache for performance"
+      }
+    ]
+  },
+  {
+    "name": "compose-internal-networks",
+    "prompt": "I have a web app, API, and database in docker-compose. Only the web app should be accessible from outside. How do I configure networking?",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "internal:\\s*true|internal: true",
+        "description": "Uses internal: true for backend network isolation"
+      },
+      {
+        "type": "content_contains",
+        "value": "networks:",
+        "description": "Defines separate networks for frontend and backend"
+      }
+    ]
+  },
+  {
+    "name": "compose-profiles",
+    "prompt": "I want to have optional debug tools in my docker-compose.yml that only start when needed, not during normal development",
+    "assertions": [
+      {
+        "type": "content_contains",
+        "value": "profiles:",
+        "description": "Uses compose profiles for optional services"
+      },
+      {
+        "type": "content_regex",
+        "value": "profiles:.*\\[|profiles:\\n.*- ",
+        "description": "Assigns profiles to optional debug services"
+      }
+    ]
+  },
+  {
+    "name": "version-pinning",
+    "prompt": "Review this Dockerfile for version pinning issues:\n\nFROM node:latest\nRUN apt-get update && apt-get install -y curl\nRUN npm install -g typescript\nCOPY . .\nCMD [\"node\", \"app.js\"]",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "latest|pin|specific.*version|tag",
+        "description": "Flags :latest tag and recommends pinned version"
+      },
+      {
+        "type": "content_regex",
+        "value": "node:\\d|node:2[02]",
+        "description": "Suggests specific Node.js version tag"
+      }
+    ]
+  },
+  {
+    "name": "healthcheck-dockerfile",
+    "prompt": "Add a HEALTHCHECK to this Dockerfile for a web server running on port 8080",
+    "assertions": [
+      {
+        "type": "content_contains",
+        "value": "HEALTHCHECK",
+        "description": "Uses HEALTHCHECK instruction in Dockerfile"
+      },
+      {
+        "type": "content_regex",
+        "value": "curl|wget|/healthz|/health|localhost:8080",
+        "description": "Checks health endpoint or port availability"
+      },
+      {
+        "type": "content_regex",
+        "value": "--interval|--timeout|--retries|--start-period",
+        "description": "Configures healthcheck timing parameters"
+      }
+    ]
+  },
+  {
+    "name": "implicit-containerize-app",
+    "prompt": "Containerize this Python Flask application for production deployment",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "FROM.*python|FROM.*alpine",
+        "description": "Creates a Dockerfile with appropriate Python base image"
+      },
+      {
+        "type": "content_regex",
+        "value": "USER|adduser|useradd",
+        "description": "Runs as non-root user"
+      },
+      {
+        "type": "content_regex",
+        "value": "gunicorn|uwsgi|waitress",
+        "description": "Uses production WSGI server instead of Flask dev server"
+      },
+      {
+        "type": "content_regex",
+        "value": "requirements\\.txt|pip install",
+        "description": "Installs Python dependencies"
+      }
+    ]
+  },
+  {
+    "name": "implicit-image-too-big",
+    "prompt": "Why is my Docker image 2.3GB? Here's my Dockerfile:\n\nFROM ubuntu:22.04\nRUN apt-get update && apt-get install -y build-essential python3 python3-pip\nCOPY . .\nRUN pip3 install -r requirements.txt\nRUN python3 setup.py build\nCMD [\"python3\", \"app.py\"]",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "multi.stage|AS builder|FROM.*AS",
+        "description": "Recommends multi-stage build to separate build and runtime"
+      },
+      {
+        "type": "content_regex",
+        "value": "alpine|slim|distroless",
+        "description": "Recommends smaller base image"
+      },
+      {
+        "type": "content_regex",
+        "value": "build.essential|build.*tool|unnecessary.*package",
+        "description": "Identifies build-essential as unnecessary in final image"
+      }
+    ]
+  },
+  {
+    "name": "implicit-compose-startup-order",
+    "prompt": "My app crashes because the database isn't ready when it starts. I'm using docker-compose with depends_on but it still fails.",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "condition:|service_healthy",
+        "description": "Recommends depends_on with condition: service_healthy"
+      },
+      {
+        "type": "content_contains",
+        "value": "healthcheck",
+        "description": "Explains that healthcheck is needed for proper startup ordering"
+      },
+      {
+        "type": "content_regex",
+        "value": "start_period|start.period",
+        "description": "Mentions start_period for slow-starting services"
+      }
+    ]
+  },
+  {
+    "name": "secret-scanning-ci",
+    "prompt": "Our CI secret scanner flags .env.example and README.md as containing secrets. These are just placeholders. How do I handle this?",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "exclude|EXCLUDE|allowlist|ignore|skip",
+        "description": "Recommends excluding documentation files from secret scanning"
+      },
+      {
+        "type": "content_regex",
+        "value": "\\.env\\.example|README|docs/",
+        "description": "Identifies specific files to exclude from scanning"
+      }
+    ]
+  },
+  {
+    "name": "dind-overlay-error",
+    "prompt": "My CI job runs Docker inside Docker and I get 'mount source: overlay, fstype: overlay, err: invalid argument'. What's wrong?",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "overlay.*overlay|overlay-on-overlay|vfs",
+        "description": "Identifies the overlay-on-overlay problem"
+      },
+      {
+        "type": "content_regex",
+        "value": "vfs|storage.driver.*vfs",
+        "description": "Recommends VFS storage driver as the solution"
+      }
+    ]
+  },
+  {
+    "name": "ci-integration-test-workflow",
+    "prompt": "Create a GitHub Actions workflow that builds my Docker image, starts the stack with compose, waits for healthy, tests the endpoint, then cleans up",
+    "assertions": [
+      {
+        "type": "content_contains",
+        "value": "docker compose",
+        "description": "Uses docker compose for stack management"
+      },
+      {
+        "type": "content_regex",
+        "value": "healthy|health",
+        "description": "Waits for services to become healthy"
+      },
+      {
+        "type": "content_regex",
+        "value": "curl|wget|test.*endpoint",
+        "description": "Tests the application endpoint"
+      },
+      {
+        "type": "content_regex",
+        "value": "always\\(\\)|if:.*always|cleanup|down",
+        "description": "Includes cleanup step that runs regardless of test outcome"
+      }
+    ]
+  },
+  {
+    "name": "no-secrets-in-layers",
+    "prompt": "I need to clone a private Git repo during my Docker build. How do I handle the SSH key without baking it into the image?",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "secret|--mount=type=secret|BuildKit|DOCKER_BUILDKIT",
+        "description": "Uses BuildKit secrets or multi-stage approach to avoid baking secrets"
+      },
+      {
+        "type": "content_regex",
+        "value": "layer|history|inspect",
+        "description": "Explains why secrets in layers are dangerous (visible in image history)"
+      }
+    ]
+  },
+  {
+    "name": "copy-order-cache",
+    "prompt": "My Docker build is slow because it reinstalls all npm packages every time I change a source file. How do I fix this?",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "package.*json.*first|COPY package|copy.*package\\.json",
+        "description": "Recommends copying package.json before source code"
+      },
+      {
+        "type": "content_regex",
+        "value": "cache|layer|invalidat",
+        "description": "Explains Docker layer caching and cache invalidation"
+      },
+      {
+        "type": "content_regex",
+        "value": "npm ci|npm install",
+        "description": "Runs npm install/ci after copying only dependency files"
       }
     ]
   }

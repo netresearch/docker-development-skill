@@ -179,7 +179,7 @@ check_refs() {
             warn 2 "Broken reference in AGENTS.md: ${ref} -> ${clean} not found"
             has_broken=true
         fi
-    done < <(grep -oP '\]\(\K[^)]+' "AGENTS.md" 2>/dev/null || true)
+    done < <(sed -n 's/.*\](\([^)]*\)).*/\1/p' "AGENTS.md" 2>/dev/null || true)
 
     if [[ "$has_broken" == false ]]; then
         pass 2 "All references resolve"
@@ -205,10 +205,10 @@ check_commands() {
                 warn 2 "make ${target}: no matching Makefile target (warning)"
                 has_make_issue=true
             fi
-        done < <(grep -oP '`make\s+\K[a-zA-Z0-9_-]+' "AGENTS.md" 2>/dev/null || true)
+        done < <(grep -oE '`make [a-zA-Z0-9_-]+`' "AGENTS.md" 2>/dev/null | sed 's/`make //;s/`//' || true)
         if [[ "$has_make_issue" == false ]]; then
             local make_count
-            make_count=$(grep -oP '`make\s+\K[a-zA-Z0-9_-]+' "AGENTS.md" 2>/dev/null | wc -l || true)
+            make_count=$(grep -oE '`make [a-zA-Z0-9_-]+`' "AGENTS.md" 2>/dev/null | sed 's/`make //;s/`//' | wc -l || true)
             if [[ "$make_count" -gt 0 ]]; then
                 pass 2 "All make targets verified (${make_count} targets)"
             fi
@@ -226,10 +226,10 @@ check_commands() {
                 warn 2 "composer ${script}: no matching composer.json script (warning)"
                 has_composer_issue=true
             fi
-        done < <(grep -oP '`composer\s+\K[a-zA-Z0-9:_-]+' "AGENTS.md" 2>/dev/null || true)
+        done < <(grep -oE '`composer [a-zA-Z0-9:_-]+`' "AGENTS.md" 2>/dev/null | sed 's/`composer //;s/`//' || true)
         if [[ "$has_composer_issue" == false ]]; then
             local composer_count
-            composer_count=$(grep -oP '`composer\s+\K[a-zA-Z0-9:_-]+' "AGENTS.md" 2>/dev/null | wc -l || true)
+            composer_count=$(grep -oE '`composer [a-zA-Z0-9:_-]+`' "AGENTS.md" 2>/dev/null | sed 's/`composer //;s/`//' | wc -l || true)
             if [[ "$composer_count" -gt 0 ]]; then
                 pass 2 "All composer scripts verified (${composer_count} scripts)"
             fi
@@ -245,10 +245,10 @@ check_commands() {
                 warn 2 "npm run ${script}: no matching package.json script (warning)"
                 has_npm_issue=true
             fi
-        done < <(grep -oP '`npm run\s+\K[a-zA-Z0-9:_-]+' "AGENTS.md" 2>/dev/null || true)
+        done < <(grep -oE '`npm run [a-zA-Z0-9:_-]+`' "AGENTS.md" 2>/dev/null | sed 's/`npm run //;s/`//' || true)
         if [[ "$has_npm_issue" == false ]]; then
             local npm_count
-            npm_count=$(grep -oP '`npm run\s+\K[a-zA-Z0-9:_-]+' "AGENTS.md" 2>/dev/null | wc -l || true)
+            npm_count=$(grep -oE '`npm run [a-zA-Z0-9:_-]+`' "AGENTS.md" 2>/dev/null | sed 's/`npm run //;s/`//' | wc -l || true)
             if [[ "$npm_count" -gt 0 ]]; then
                 pass 2 "All npm scripts verified (${npm_count} scripts)"
             fi
