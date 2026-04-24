@@ -4,6 +4,15 @@
 version: 1
 skill_id: docker-development
 
+# Only run this skill for repos that actually use Docker. Without this gate
+# the skill reports Dockerfile/compose errors against TYPO3 extensions,
+# libraries, skill repos, and other non-containerised projects.
+# Uses chained `||` (not `test -o`, which is obsolescent in POSIX) and matches
+# the patterns the existing checkpoints look for.
+preconditions:
+  - type: command
+    pattern: "test -f Dockerfile || test -f Containerfile || test -f docker-compose.yml || test -f docker-compose.yaml || test -f compose.yml || test -f compose.yaml || test -f docker-bake.hcl"
+
 mechanical:
   # === DOCKERFILE/COMPOSE EXISTENCE ===
   - id: DC-01
