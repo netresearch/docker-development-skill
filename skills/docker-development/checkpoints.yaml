@@ -4,6 +4,13 @@
 version: 1
 skill_id: docker-development
 
+# Only run this skill for repos that actually use Docker. Without this gate
+# the skill reports Dockerfile/compose errors against TYPO3 extensions,
+# libraries, skill repos, and other non-containerised projects.
+preconditions:
+  - type: command
+    pattern: "test -f Dockerfile -o -f Containerfile -o -f docker-compose.yml -o -f docker-compose.yaml -o -f compose.yml -o -f compose.yaml -o -f docker-bake.hcl"
+
 mechanical:
   # === DOCKERFILE/COMPOSE EXISTENCE ===
   - id: DC-01
