@@ -130,3 +130,4 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 ## References
 
 - `references/ci-testing.md` -- Comprehensive CI testing patterns for Docker images
+- `references/dind-testing-patterns.md` -- Docker-in-Docker overlay-on-overlay solution patterns
