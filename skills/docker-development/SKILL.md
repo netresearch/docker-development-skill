@@ -22,10 +22,10 @@ Patterns for building, testing, and deploying Docker containers.
 
 ## Core Principles
 
-1. **Minimal images** -- Alpine/distroless, multi-stage builds
-2. **Security first** -- Non-root USER, no secrets in layers, pin versions
-3. **Testable** -- Verifiable in CI with entrypoint bypass and DNS mocking
-4. **Cache-efficient** -- Copy dependency files first, clean in same layer
+1. **Minimal** -- Alpine/distroless, multi-stage
+2. **Secure** -- Non-root USER, no layer secrets, pin versions
+3. **Testable** -- CI-verifiable: entrypoint bypass, DNS mocking
+4. **Cache-efficient** -- deps first, clean in same layer
 
 ## Quick Reference
 
@@ -78,7 +78,7 @@ RUN npm ci
 COPY . .
 ```
 
-Dependency manifests before source so install layers stay cached on source-only changes.
+Manifests before source keeps install layers cached on source-only changes.
 
 ### BuildKit Secrets
 
@@ -86,7 +86,7 @@ Dependency manifests before source so install layers stay cached on source-only 
 RUN --mount=type=secret,id=ssh_key,dst=/root/.ssh/id_rsa git clone git@github.com:org/repo.git
 ```
 
-Secrets in `ENV`/`ARG`/`COPY` persist in layer history (`docker history`). Use `--mount=type=secret`.
+`ENV`/`ARG`/`COPY` secrets persist in `docker history`. Use `--mount=type=secret`.
 
 ### Docker Bake (Multi-Platform)
 
@@ -129,4 +129,5 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 
 ## References
 
-- `references/ci-testing.md` -- Comprehensive CI testing patterns for Docker images
+- `references/ci-testing.md` -- CI testing patterns for Docker images
+- `references/dind-testing-patterns.md` -- Docker-in-Docker (DinD) testing patterns
