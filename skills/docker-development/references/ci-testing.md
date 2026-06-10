@@ -235,6 +235,56 @@ jobs:
             myapp:test npm test
 ```
 
+## Pattern 8: GitLab CI — image entrypoint must be a shell (or be overridden)
+
+Unlike a test-time `--entrypoint` bypass (Pattern 1), GitLab **runs every job's `script:` via `sh -c`**. If the image used as a job `image:` has a non-shell `ENTRYPOINT ["mytool"]`, the runner effectively runs `mytool sh -c '…'` → **`No such command 'sh'`**, and the job fails before the script runs.
+
+```yaml
+job:
+  image:
+    name: registry.example.com/mytool:1.0
+    entrypoint: [""]   # let the runner's shell execute the script
+  script:
+    - mytool --help
+```
+
+A CLI image also meant for `docker run mytool …` can keep `ENTRYPOINT ["mytool"]`, but **document** that GitLab consumers must set `entrypoint: [""]`. If the image is *primarily* a CI image, prefer no tool entrypoint (use `CMD`).
+
+## Pattern 9: Restricted runner egress — bundle external assets at build time
+
+CI runners (especially internal/self-hosted) often have **no outbound internet**. An image that fetches something at *runtime* (`page.add_script_tag(url="https://cdn…/axe.min.js")`, `curl https://…` in the entrypoint, a remote `pip`/`npm` install) works locally but fails in CI.
+
+Download the asset at **build time** and load it from the image. Use a multi-stage build so the fetch tooling (`curl`, `ca-certificates`) stays out of the final runtime image:
+
+```dockerfile
+# Stage 1: fetch external assets
+FROM alpine:3.20 AS asset-builder
+RUN apk add --no-cache curl
+RUN mkdir -p /opt/axe-core \
+ && curl -sSfL https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.9.1/axe.min.js \
+      -o /opt/axe-core/axe.min.js
+
+# Stage 2: final image carries only the asset
+FROM python:3.12-slim
+COPY --from=asset-builder /opt/axe-core/axe.min.js /opt/axe-core/axe.min.js
+ENV AXE_PATH=/opt/axe-core/axe.min.js
+```
+
+…and have the app prefer the local file (CDN as a dev-only fallback).
+
+## Pattern 10: Test the *built image*, not just the editable dev install
+
+A non-editable install in the image (`pip install .`, `npm install <tarball>`) does not behave like the editable/dev checkout your tests ran against. Classic failure: **data files resolved by walking from `__file__`** (`Path(__file__).resolve().parents[2]/"data"/…`) don't exist under `site-packages`, so the tool can't find its catalog/config inside the container even though `pytest` was green.
+
+- Ship data files as **package data** (Python wheel `force-include`/`package_data`; npm `files`), not via filesystem-relative paths.
+- Smoke-test the **built image**, not just the source tree:
+
+```yaml
+- run: docker build -t app:test .
+- run: docker run --rm --entrypoint python app:test -c "import app; app.load_catalog()"
+- run: docker run --rm app:test render fixture.json /tmp/out   # real command, end-to-end
+```
+
 ## Complete CI Workflow Example
 
 ```yaml
