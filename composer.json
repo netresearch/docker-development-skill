@@ -32,6 +32,5 @@
     },
     "extra": {
         "ai-agent-skill": "skills/docker-development/SKILL.md"
-    },
-    "version": "1.2.0"
+    }
 }
