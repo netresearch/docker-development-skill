@@ -4,7 +4,7 @@ description: "Use when working with ANY Docker task: writing Dockerfiles, config
 license: "(MIT AND CC-BY-SA-4.0)"
 compatibility: "Requires docker, docker compose."
 metadata:
-  version: "1.8.0"
+  version: "1.8.1"
   repository: "https://github.com/netresearch/docker-development-skill"
   author: "Netresearch DTT GmbH"
 allowed-tools:
