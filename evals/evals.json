@@ -481,5 +481,26 @@
         "description": "Runs npm install/ci after copying only dependency files"
       }
     ]
+  },
+  {
+    "name": "worker-healthcheck-pgrep-self-match",
+    "prompt": "My compose worker service reuses the web image and I gave it this healthcheck, but it stays healthy even when the consumer process is dead:\n\nhealthcheck:\n  test: [\"CMD-SHELL\", \"pgrep -f 'messenger:consume' || exit 1\"]\n\nWhy, and how do I fix it?",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "\\[m\\]essenger|character class|\\[.\\]\\w+",
+        "description": "Recommends the [c]haracter-class self-match guard for pgrep -f"
+      },
+      {
+        "type": "content_regex",
+        "value": "itself|its own|own (shell|command)|self-match",
+        "description": "Explains that pgrep matches the probe shell's own command line"
+      },
+      {
+        "type": "content_regex",
+        "value": "negative|kill|dead|down.*unhealthy|unhealthy",
+        "description": "Advises verifying the negative case too (process down -> unhealthy)"
+      }
+    ]
   }
 ]

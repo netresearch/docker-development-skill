@@ -151,6 +151,46 @@ services:
   run: docker rm -f test-container
 ```
 
+### Worker/Sidecar Services That Reuse an App Image
+
+A compose service that reuses the app image (e.g. a queue worker on the
+php-fpm+nginx web image) **inherits the image's baked-in `HEALTHCHECK`**.
+Three traps, in the order they typically bite in CI:
+
+1. **Inherited check probes a daemon the worker doesn't run** (nginx, php-fpm)
+   → the worker is permanently `unhealthy` and breaks
+   `docker compose up -d --wait` — and anything else gating on health.
+2. **`healthcheck: { disable: true }` is not a fix when `--wait` is used** —
+   compose fails with `container ... has no healthcheck configured`
+   (explicitly listed services without a check are un-waitable).
+   Give the worker a real check instead.
+3. **A naive `pgrep -f` check is *always* healthy** — the `CMD-SHELL`
+   wrapper's own command line contains the search string, so `pgrep`
+   matches the probe shell itself, even with a dead worker.
+
+```yaml
+services:
+  worker:
+    image: myapp:latest   # inherits the web image's HEALTHCHECK
+    command: php bin/console messenger:consume async
+    healthcheck:
+      # WRONG: matches the probe's own shell -- healthy forever
+      # test: ["CMD-SHELL", "pgrep -f 'messenger:consume' || exit 1"]
+      # RIGHT: [c]haracter-class guard prevents self-match
+      test: ["CMD-SHELL", "pgrep -f '[m]essenger:consume' || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+```
+
+Verify any health probe **both ways**: process up → `healthy` AND process
+killed → `unhealthy`. The naive `pgrep` pattern passes the positive test
+and hides the bug.
+
+Prefer letting a worker exit on its own limits (`exec` the daemon as PID 1,
+restart policy with backoff) over in-container `while true ... || true`
+loops that mask fatal errors from orchestration.
+
 ## Pattern 5: Secret Scanning with Exclusions
 
 ### Problem
