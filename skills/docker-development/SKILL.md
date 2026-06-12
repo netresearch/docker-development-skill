@@ -116,6 +116,7 @@ target "app" {
 2. **Mock upstream DNS**: `docker run --rm --add-host backend:127.0.0.1 nginx-image nginx -t`
 3. **Compose validation**: `cp .env.example .env` before `docker compose config`
 4. **Secret scanning**: Exclude `.env.example`, README, docs from scanners
+5. **Root-owned artifacts**: in-container installs leave root-owned bind-mount dirs (`EACCES` on host) -- `references/bind-mount-ownership.md`
 
 ## .dockerignore
 
@@ -123,11 +124,12 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 
 ## Compose Essentials
 
-- `depends_on` with `condition: service_healthy` + `healthcheck` with `start_period` for startup ordering
-- `networks` with `internal: true` for database isolation from external access
-- `profiles: [debug]` for optional services that only start with `--profile debug`
+- startup ordering: `depends_on.condition: service_healthy` + `healthcheck` `start_period`
+- `networks.internal: true` isolates databases from external access
+- `profiles: [debug]`: services start only with `--profile debug`
 
 ## References
 
 - `references/ci-testing.md` -- CI testing patterns for Docker images
 - `references/dind-testing-patterns.md` -- Docker-in-Docker (DinD) testing patterns
+- `references/bind-mount-ownership.md` -- root-owned bind-mount artifacts
