@@ -45,9 +45,9 @@ Then reinstall/rebuild as the host user.
 
 | Approach | How |
 |---|---|
-| Run as the host user | `docker compose run --rm --user "$(id -u):$(id -g)" app npm ci` |
+| Run as the host user | `docker compose run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp app npm ci` — the arbitrary UID has no writable home in the container, and npm writes its cache to `$HOME`; point `HOME` (or `npm_config_cache`) at a writable path |
 | Fix the UID in the image | `adduser -u 1000 ...` + `USER app` matching the typical host UID |
-| Compose-wide | `user: "${UID:-1000}:${GID:-1000}"` on dev services |
+| Compose-wide | `user: "${UID:-1000}:${GID:-1000}"` on dev services — note `UID`/`GID` are **not** exported environment variables in most shells (bash's `UID` is shell-only); set them in the project `.env` file or `export UID GID` before composing |
 | Keep artifacts out of the mount | named volume over `node_modules/`, or build inside the image (multi-stage) instead of into the mount |
 
 Rootless Docker / userns-remap avoids the issue entirely but changes
