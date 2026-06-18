@@ -380,3 +380,12 @@ jobs:
         if: always()
         run: docker compose down -v
 ```
+
+## Local boot-test pitfalls
+
+When smoke/boot-testing an image by hand (not in the CI matrix):
+
+- **Host-port collisions mislead.** If the published port (`-p HOST:CONTAINER`) is already taken by another container, `docker run -d` leaves the new container unstarted (it stays in `Created` state; the CLI typically exits non-zero, often `125`) while your `curl localhost:HOST` is answered by the *other* container — a false pass, or a baffling failure. Use a free/unique host port, or skip `-p` and probe from inside: `docker exec <c> sh -c 'curl -sf localhost:<port>'`.
+- **Foreground apps that log to a file leave `docker logs` empty.** E.g. Tomcat started with `-fg` writes to `logs/catalina.out`, not stdout — an empty `docker logs` does *not* mean "nothing happened". Read the in-container log files (`docker exec <c> sh -c 'tail -n 80 .../catalina.out'`), and check the process and state (`docker inspect -f '{{.State.Status}} {{.State.ExitCode}}' <c>`).
+- **Minimal/distroless images have no shell.** `docker exec … sh`/`tail`/`pgrep` won't exist on `scratch`/distroless runtimes — probe with host-side `curl` against a published port, `docker inspect` for state, or a debug sidecar (`docker run --rm --pid container:<c> busybox …`).
+- **Grep for real failure signals, not benign noise.** After a bundled-dependency swap, scan logs for `NoSuchMethodError|AbstractMethodError|LinkageError|IncompatibleClassChangeError` (binary incompatibility) — not bare `ClassNotFoundException`, which OSGi/plugin frameworks emit normally.
