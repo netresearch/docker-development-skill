@@ -206,6 +206,24 @@ With the corresponding Molecule prepare step using VFS:
           storage-driver: vfs
 ```
 
+## Local test runs and disk space
+
+Running container-based test suites locally — Molecule with `geerlingguy` systemd images, repeated nested builds, or rebuilding a CI image between iterations — creates a **fresh image and overlay layer per converge or rebuild**. These accumulate fast and can fill the host disk within a handful of runs. When the disk fills, even diagnostic commands fail to write their output, so you lose the very information needed to recover — prevention beats recovery.
+
+**Before launching** a container test suite, check free space on the Docker storage filesystem:
+
+```bash
+df -h /
+```
+
+**After each run**, prune your own run's artifacts immediately — do not defer cleanup to the end of the session, by which point the disk may already be full:
+
+```bash
+docker container prune -f && docker image rm -f <image> && docker builder prune -f
+```
+
+Pruning per-run keeps the working set small and surfaces a real disk problem early, while diagnostic commands can still write output.
+
 ## Troubleshooting
 
 | Error | Cause | Fix |
