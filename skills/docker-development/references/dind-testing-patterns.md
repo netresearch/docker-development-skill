@@ -213,13 +213,13 @@ Running container-based test suites locally — Molecule with `geerlingguy` syst
 **Before launching** a container test suite, check free space on the Docker storage filesystem:
 
 ```bash
-df -h /
+df -h $(docker info -f '{{.DockerRootDir}}')
 ```
 
 **After each run**, prune your own run's artifacts immediately — do not defer cleanup to the end of the session, by which point the disk may already be full:
 
 ```bash
-docker container prune -f && docker image rm -f <image> && docker builder prune -f
+docker container prune -f && docker image prune -f && docker builder prune -f
 ```
 
 Pruning per-run keeps the working set small and surfaces a real disk problem early, while diagnostic commands can still write output.
