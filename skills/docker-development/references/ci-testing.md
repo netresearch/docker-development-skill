@@ -325,6 +325,61 @@ A non-editable install in the image (`pip install .`, `npm install <tarball>`) d
 - run: docker run --rm app:test render fixture.json /tmp/out   # real command, end-to-end
 ```
 
+## Pattern 11: Bake targets must inherit `docker-metadata-action`
+
+### Problem
+
+When a workflow migrates from `docker/build-push-action` to
+`docker/bake-action`, the tags computed by `docker/metadata-action`
+(semver from release tags, branch tags, `latest`) are **silently dropped**.
+There is no CI error — the registry only ever updates the tags hardcoded in
+`docker-bake.hcl`, so release and branch tags go stale or missing.
+
+`docker/metadata-action` writes a generated bake definition exposing a
+`docker-metadata-action` target that carries the computed `tags`/`labels`.
+A bake target only picks them up if it explicitly inherits that target.
+
+### Solution
+
+Declare a stub `docker-metadata-action` target with local defaults and have
+the real target inherit it. In CI, the metadata-action's generated bake file
+replaces the stub; locally, the defaults apply.
+
+```hcl
+# docker-bake.hcl
+target "docker-metadata-action" {
+  tags = ["myapp:dev"]   # local default; replaced by metadata-action in CI
+}
+
+target "app" {
+  inherits  = ["docker-metadata-action"]
+  platforms = ["linux/amd64", "linux/arm64"]
+  # Do NOT set `tags` here: a target's own attributes override inherited
+  # ones, so a local `tags` would discard the CI-computed tags.
+}
+```
+
+Re-add rolling tags such as `latest`/`production` through the
+metadata-action config, not the bake file:
+
+```yaml
+- uses: docker/metadata-action@v5
+  with:
+    images: ghcr.io/org/myapp
+    tags: |
+      type=raw,value=latest,enable={{is_default_branch}}
+```
+
+### Verify Both Paths
+
+```bash
+# Local: stub defaults apply
+docker buildx bake --print
+
+# CI: simulate the generated metadata file replacing the stub
+docker buildx bake -f docker-bake.hcl -f /tmp/metadata-bake.json --print
+```
+
 ## Complete CI Workflow Example
 
 ```yaml
