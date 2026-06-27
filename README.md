@@ -12,10 +12,18 @@ Agent Skill for Docker image development - Dockerfile best practices, CI testing
 - **Docker Compose** - Service orchestration, health checks, networking
 - **Docker Bake** - Multi-platform builds with BuildKit
 - **Security** - Vulnerability scanning, non-root users, secret management
+- **Windows / WSL2** - Run docker through WSL when Docker Desktop uses the WSL2 backend (separate `docker-via-wsl` skill)
+
+## Skills
+
+This package bundles two skills:
+
+- **`docker-development`** — Dockerfile, compose, bake, CI testing, and security patterns.
+- **`docker-via-wsl`** — for AI agents running on a Windows host *outside* WSL: re-issue every `docker`/`docker compose` command inside WSL (via `wsl.exe`) so Docker Desktop's WSL2 backend does not corrupt bind-mount paths.
 
 ## Automatic Triggers
 
-This skill activates automatically when working with:
+The `docker-development` skill activates automatically when working with:
 
 | File Pattern | Description |
 |--------------|-------------|
@@ -23,6 +31,8 @@ This skill activates automatically when working with:
 | `docker-compose.yml`, `compose.yml` | Multi-container orchestration |
 | `docker-bake.hcl` | BuildKit bake configurations |
 | `.dockerignore` | Build context optimization |
+
+The `docker-via-wsl` skill activates when an agent on a Windows shell (Git Bash/MSYS/PowerShell, *outside* WSL) is about to run any `docker` command.
 
 ## Installation
 
@@ -41,6 +51,7 @@ Install with any [Agent Skills](https://agentskills.io)-compatible agent:
 
 ```bash
 npx skills add https://github.com/netresearch/docker-development-skill --skill docker-development
+npx skills add https://github.com/netresearch/docker-development-skill --skill docker-via-wsl
 ```
 
 ### Download Release
@@ -104,9 +115,10 @@ docker compose config > /dev/null
 
 ## References
 
-Extended documentation in `skills/docker-development/references/`:
+Extended documentation in the skill `references/` directories:
 
-- `ci-testing.md` - Comprehensive CI testing patterns
+- `docker-development/references/ci-testing.md` - Comprehensive CI testing patterns
+- `docker-via-wsl/references/diagnosis-and-fix.md` - Diagnose and fix a wrong bind mount caused by driving Docker from a Windows shell
 
 ## Contributing
 

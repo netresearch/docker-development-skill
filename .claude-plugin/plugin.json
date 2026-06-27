@@ -17,6 +17,7 @@
     "ci-cd"
   ],
   "skills": [
-    "./skills/docker-development"
+    "./skills/docker-development",
+    "./skills/docker-via-wsl"
   ]
 }
