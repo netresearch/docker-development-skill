@@ -9,7 +9,12 @@
 │   ├── checkpoints.yaml                # Evaluation checkpoints
 │   └── references/
 │       ├── ci-testing.md               # CI testing patterns for containers
-│       └── dind-testing-patterns.md    # Docker-in-Docker testing patterns
+│       ├── dind-testing-patterns.md    # Docker-in-Docker testing patterns
+│       └── bind-mount-ownership.md     # root-owned bind-mount artifacts
+├── skills/docker-via-wsl/              # Windows: run docker through WSL2
+│   ├── SKILL.md                        # Skill definition
+│   └── references/
+│       └── diagnosis-and-fix.md        # wrong-bind-mount diagnosis + fix
 ├── Build/
 │   ├── Scripts/
 │   │   └── check-plugin-version.sh     # Version validation script
@@ -45,6 +50,9 @@
 
 ## References
 
-- [SKILL.md](skills/docker-development/SKILL.md) — full skill definition
+- [docker-development SKILL.md](skills/docker-development/SKILL.md) — full skill definition
+- [docker-via-wsl SKILL.md](skills/docker-via-wsl/SKILL.md) — run docker through WSL2 on Windows hosts
 - [CI Testing](skills/docker-development/references/ci-testing.md) — CI testing patterns
 - [DinD Patterns](skills/docker-development/references/dind-testing-patterns.md) — Docker-in-Docker testing
+- [Bind-Mount Ownership](skills/docker-development/references/bind-mount-ownership.md) — root-owned bind-mount artifacts
+- [WSL Diagnosis & Fix](skills/docker-via-wsl/references/diagnosis-and-fix.md) — wrong-bind-mount diagnosis from a Windows shell
