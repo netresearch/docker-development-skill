@@ -7,7 +7,8 @@ Distilled from NRS-4496 (central release-key image for PHP/nginx builds).
 ## Pitfall: gpg import bakes a stale keybox lock into the layer
 
 With gnupg 2.4, `gpg --import` in one `RUN` starts keyboxd/gpg-agent and leaves
-`/root/.gnupg/public-keys.d/*.lock` behind **inside the committed layer**. The
+`public-keys.d/*.lock` behind in the GnuPG home **inside the committed layer**
+(`/root/.gnupg` when building as root, else `$GNUPGHOME`/`~/.gnupg`). The
 next `RUN` that touches the keyring (e.g. `gpg --verify`) then hangs on the
 stale lock and dies:
 
@@ -22,7 +23,7 @@ If you must import, clean up in the **same** `RUN` that imported:
 ```dockerfile
 RUN gpg --no-tty --batch --import /tmp/keys.asc \
  && gpgconf --kill all \
- && rm -f /root/.gnupg/public-keys.d/*.lock
+ && rm -f "$(gpgconf --list-dirs homedir)"/public-keys.d/*.lock
 ```
 
 ## Prefer gpgv: verify without any keyring state
