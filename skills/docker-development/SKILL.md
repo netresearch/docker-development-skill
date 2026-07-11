@@ -32,13 +32,13 @@ Patterns for building, testing, and deploying Docker containers.
 ### Multi-Stage Build (Node.js)
 
 ```dockerfile
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 COPY . .
 
-FROM node:20-alpine
+FROM node:24-alpine
 RUN addgroup -g 1001 app && adduser -u 1001 -G app -D app
 USER app
 COPY --from=builder /app .
@@ -50,7 +50,7 @@ CMD ["node", "server.js"]
 ### Multi-Stage Build (Go -- scratch/distroless)
 
 ```dockerfile
-FROM golang:1.22-alpine AS builder
+FROM golang:1.26-alpine AS builder
 WORKDIR /app
 COPY go.* ./
 RUN go mod download

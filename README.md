@@ -117,7 +117,7 @@ docker compose config > /dev/null
 
 Extended documentation in the skill `references/` directories:
 
-- `docker-development/references/ci-testing.md` - Comprehensive CI testing patterns
+- `docker-development/references/ci-testing.md` - Retro-born CI testing gotchas
 - `docker-via-wsl/references/diagnosis-and-fix.md` - Diagnose and fix a wrong bind mount caused by driving Docker from a Windows shell
 
 ## Contributing
