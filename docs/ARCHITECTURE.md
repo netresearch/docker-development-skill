@@ -15,7 +15,7 @@ Main entry point loaded by agent frameworks. Contains:
 
 ### Reference Docs (`skills/docker-development/references/`)
 
-- **ci-testing.md** — comprehensive CI testing patterns for container images
+- **ci-testing.md** — retro-born CI testing gotchas for container images
 - **dind-testing-patterns.md** — Docker-in-Docker testing strategies
 
 ### Checkpoints (`skills/docker-development/checkpoints.yaml`)
