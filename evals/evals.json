@@ -514,7 +514,7 @@
       },
       {
         "type": "content_regex",
-        "value": "-e bash -lc|bash -lc",
+        "value": "-e bash -lc",
         "description": "Uses the specific 'wsl.exe -e bash -lc' re-issue form, not a bare 'wsl' invocation"
       },
       {
