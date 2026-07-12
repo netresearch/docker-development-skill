@@ -52,7 +52,7 @@ Install `gpgv` explicitly for the base you build on:
 - **Debian/Ubuntu**: `gpgv` is a **separate package** — `apt-get install gnupg`
   does NOT provide it. A job that verifies with `gpgv` must
   `apt-get install ... gpgv`, or every call dies with a silent
-  `gpgv: command not found` (which inside `if gpgv …; then` reads as a
+  `gpgv: command not found` (which inside `if gpgv ...; then` reads as a
   verification *failure*, not a missing binary).
 - **Alpine**: the `gnupg` package *does* bundle `gpgv`, so `apk add gnupg` is enough.
 
