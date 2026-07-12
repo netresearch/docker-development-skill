@@ -502,5 +502,26 @@
         "description": "Advises verifying the negative case too (process down -> unhealthy)"
       }
     ]
+  },
+  {
+    "name": "docker-via-wsl-reissue-not-windows-shell",
+    "prompt": "My Bash tool's `uname -s` shows MINGW64_NT -- I'm on Windows outside WSL. The user's `docker compose up` from this Git Bash shell, run from a Z:\\ mapped network drive, fails with 'could not read from input file: Is a directory' for a bind-mounted config file. What do I do?",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "wsl\\.exe",
+        "description": "Re-issues the Docker command through wsl.exe instead of continuing to drive Docker from the Windows/Git-Bash shell"
+      },
+      {
+        "type": "content_regex",
+        "value": "-e bash -lc",
+        "description": "Uses the specific 'wsl.exe -e bash -lc' re-issue form, not a bare 'wsl' invocation"
+      },
+      {
+        "type": "content_regex",
+        "value": "SMB|network (share|drive)|Z:|UNC|WSL2",
+        "description": "Identifies the SMB/network-drive path translation inside Docker Desktop's WSL2 backend as the root cause, not a Docker cache or single-file-bind-mount bug"
+      }
+    ]
   }
 ]
