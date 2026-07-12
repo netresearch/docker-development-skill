@@ -2,7 +2,7 @@
 
 Patterns for verifying downloaded release tarballs against GPG keys inside
 multi-stage builds — and the layer pitfall that breaks the naive approach.
-Distilled from NRS-4496 (central release-key image for PHP/nginx builds).
+Distilled from building a central release-key image for PHP/nginx/Node builds.
 
 ## Pitfall: gpg import bakes a stale keybox lock into the layer
 
@@ -76,6 +76,6 @@ FROM registry.example.com/support/gpg-keys:latest@sha256:<digest> AS release-key
   `php.net/distributions/php-keyring.gpg`, `nginx.org/keys/*.key`), never to a
   keyserver fetch at build time.
 
-Reference implementation: `support/gpg-keys` on git.netresearch.de — including
-`verify-release`/`get-verified-release` helper scripts shipped *in* the image
-(POSIX sh, executed by the consumer's shell; a `scratch` image runs nothing).
+A robust shape: a central keys image that also ships `verify-release` /
+`get-verified-release` helper scripts *in* the image (POSIX sh, executed by the
+consumer's shell; a `scratch` image runs nothing itself).
