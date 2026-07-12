@@ -28,8 +28,7 @@ RUN gpg --no-tty --batch --import /tmp/keys.asc \
 
 ## Prefer gpgv: verify without any keyring state
 
-`gpgv` (part of gnupg, also busybox-compatible environments via the gnupg
-package) reads **binary** keyring files directly — no import, no `~/.gnupg`,
+`gpgv` reads **binary** keyring files directly — no import, no `~/.gnupg`,
 no agent, no locks, and the accepted signer set is exactly the key files you
 pass:
 
@@ -45,6 +44,20 @@ RUN set -eux; \
 
 Convert armored keys once with `gpg --dearmor` (or ship binary exports);
 `--keyring` may be repeated per key file.
+
+### `gpgv` is not always in the `gnupg` package
+
+Install `gpgv` explicitly for the base you build on:
+
+- **Debian/Ubuntu**: `gpgv` is a **separate package** — `apt-get install gnupg`
+  does NOT provide it. A job that verifies with `gpgv` must
+  `apt-get install ... gpgv`, or every call dies with a silent
+  `gpgv: command not found` (which inside `if gpgv …; then` reads as a
+  verification *failure*, not a missing binary).
+- **Alpine**: the `gnupg` package *does* bundle `gpgv`, so `apk add gnupg` is enough.
+
+Testing on your host (which usually has `gpgv`) hides the Debian gap — run the
+verification inside the actual build image before trusting it.
 
 ## Ship keys as a scratch image, not from keyservers
 
