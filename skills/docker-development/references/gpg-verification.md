@@ -2,7 +2,7 @@
 
 Patterns for verifying downloaded release tarballs against GPG keys inside
 multi-stage builds — and the layer pitfall that breaks the naive approach.
-Distilled from NRS-4496 (central release-key image for PHP/nginx builds).
+Distilled from building a central release-key image for PHP/nginx/Node builds.
 
 ## Pitfall: gpg import bakes a stale keybox lock into the layer
 
@@ -28,8 +28,7 @@ RUN gpg --no-tty --batch --import /tmp/keys.asc \
 
 ## Prefer gpgv: verify without any keyring state
 
-`gpgv` (part of gnupg, also busybox-compatible environments via the gnupg
-package) reads **binary** keyring files directly — no import, no `~/.gnupg`,
+`gpgv` reads **binary** keyring files directly — no import, no `~/.gnupg`,
 no agent, no locks, and the accepted signer set is exactly the key files you
 pass:
 
@@ -45,6 +44,20 @@ RUN set -eux; \
 
 Convert armored keys once with `gpg --dearmor` (or ship binary exports);
 `--keyring` may be repeated per key file.
+
+### `gpgv` is not always in the `gnupg` package
+
+Install `gpgv` explicitly for the base you build on:
+
+- **Debian/Ubuntu**: `gpgv` is a **separate package** — `apt-get install gnupg`
+  does NOT provide it. A job that verifies with `gpgv` must
+  `apt-get install ... gpgv`, or every call dies with a silent
+  `gpgv: command not found` (which inside `if gpgv ...; then` reads as a
+  verification *failure*, not a missing binary).
+- **Alpine**: the `gnupg` package *does* bundle `gpgv`, so `apk add gnupg` is enough.
+
+Testing on your host (which usually has `gpgv`) hides the Debian gap — run the
+verification inside the actual build image before trusting it.
 
 ## Ship keys as a scratch image, not from keyservers
 
@@ -63,6 +76,6 @@ FROM registry.example.com/support/gpg-keys:latest@sha256:<digest> AS release-key
   `php.net/distributions/php-keyring.gpg`, `nginx.org/keys/*.key`), never to a
   keyserver fetch at build time.
 
-Reference implementation: `support/gpg-keys` on git.netresearch.de — including
-`verify-release`/`get-verified-release` helper scripts shipped *in* the image
-(POSIX sh, executed by the consumer's shell; a `scratch` image runs nothing).
+A robust shape: a central keys image that also ships `verify-release` /
+`get-verified-release` helper scripts *in* the image (POSIX sh, executed by the
+consumer's shell; a `scratch` image runs nothing itself).
