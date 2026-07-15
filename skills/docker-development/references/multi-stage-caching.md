@@ -7,10 +7,13 @@
 **Fix — re-parent, don't reorder.** Put the code-independent installs in a *sibling* stage `FROM base` (a stage with **no** code copy), then pull the built tree into the leaf via one `COPY --from=<code-stage>`:
 
 ```dockerfile
-FROM base AS deps        # composer/npm install + COPY . . + build  (code-dependent)
-FROM base AS devtools    # apt, xdebug, symfony-cli, npm ci, chromium — NO code copy
+# composer/npm install + COPY . . + build (code-dependent)
+FROM base AS deps
+# apt, xdebug, symfony-cli, npm ci, chromium — NO code copy
+FROM base AS devtools
 FROM devtools AS dev
-COPY --from=deps --chown=app:app /app /app   # the ONE code-dependent layer of dev
+# the ONE code-dependent layer of dev
+COPY --from=deps --chown=app:app /app /app
 ```
 
 A source-only edit now invalidates `deps` (and dev's copy) but leaves the whole `devtools` lineage CACHED.
