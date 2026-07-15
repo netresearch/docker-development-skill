@@ -59,6 +59,35 @@ Install `gpgv` explicitly for the base you build on:
 Testing on your host (which usually has `gpgv`) hides the Debian gap — run the
 verification inside the actual build image before trusting it.
 
+## A signature proves the signer, not the version
+
+`gpgv` (and `gpg --verify`) proves *"signed by a trusted release key"* — **not**
+*"is the version I asked for"*. The signature travels with the tarball, so a
+**validly signed older release** placed under a newer name passes verification
+unchanged. This is harmless when you download straight from the authoritative
+origin (it owns the path→content binding), but the moment a **mutable store**
+sits in front of the origin — a package-registry cache, a mirror, an artifact
+proxy — an attacker who can write that store can serve a real, signed,
+*known-vulnerable* `foo-1.2.3.tar.gz` under the `1.2.9` coordinate. It passes
+`gpgv`, and the build silently compiles the downgraded version.
+
+Bind the artifact to the requested version after the signature checks out —
+assert the tarball's sole top-level directory (or the checksum-file entry)
+matches the expected `name-<version>`:
+
+```dockerfile
+RUN set -eux; \
+    gpgv --keyring /tmp/k.gpg php.tar.xz.asc php.tar.xz; \
+    got=$(tar tf php.tar.xz | sed 's#/.*##' | sort -u); \
+    [ "$got" = "php-${PHP_VERSION}" ] || { echo "version mismatch: $got" >&2; exit 1; }
+```
+
+Checksum-list formats (e.g. Node's `SHASUMS256.txt`) get this for free — the
+artifact is looked up by exact filename inside the signed list, so a wrong
+version yields no matching line. Detached-signature formats (php/nginx) do not —
+add the assertion yourself. It also hardens any later `tar --strip-components=1`
+that assumes a single predictable top-level directory.
+
 ## Ship keys as a scratch image, not from keyservers
 
 Public keyservers (`keyserver.ubuntu.com`, `keys.openpgp.org`) time out under
