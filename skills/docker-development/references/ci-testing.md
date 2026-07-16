@@ -149,6 +149,20 @@ docker buildx bake --print
 docker buildx bake -f docker-bake.hcl -f /tmp/metadata-bake.json --print
 ```
 
+## Pattern 6: On-demand image tags — build on ONE trigger, and bake the version explicitly
+
+A prod-like *variant* image (a profiler build, a debug build) is often published under a content-addressed tag like `:profiling-<sha>` so operators can switch to it on demand. Two traps appear when that image also surfaces its own build provenance (commit, ref, version) on a status page.
+
+**Trap A — the tag race.** If the variant builds on *both* `push: main` and `push: tags`, both runs write the SAME `:profiling-<sha>` tag (same commit → same sha), and last-writer-wins decides which run's baked git-ref survives. A release deploy can then read `ref=main` instead of `ref=v1.2.3`. Fix: build the on-demand variant on ONE trigger that carries the right provenance — tags (plus manual dispatch), not `main`:
+
+```yaml
+- name: Build and push profiling image
+  # Tag/dispatch only: a main-push build would race the tag build for :profiling-<sha>
+  if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+```
+
+**Trap B — no version in a `.git`-less build.** A Docker build has no `.git`, so anything that derives the version from git or the package's own metadata reads a placeholder — e.g. Composer's `InstalledVersions::getPrettyVersion(<root-package>)` returns `1.0.0+no-version-set`. Bake the version in explicitly: pass a build arg before the dependency install (`COMPOSER_ROOT_VERSION=1.2.3`, or the language's equivalent) so the metadata records it, or have the app read a baked env (`APP_BUILD_REF`) that the workflow sets from `github.ref_name`. With Trap A fixed, that ref is deterministically the release tag.
+
 ## Local boot-test pitfalls
 
 When smoke/boot-testing an image by hand (not in the CI matrix):
