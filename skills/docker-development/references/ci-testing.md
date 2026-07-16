@@ -161,7 +161,14 @@ A prod-like *variant* image (a profiler build, a debug build) is often published
   if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
 ```
 
-**Trap B — no version in a `.git`-less build.** A Docker build has no `.git`, so anything that derives the version from git or the package's own metadata reads a placeholder — e.g. Composer's `InstalledVersions::getPrettyVersion(<root-package>)` returns `1.0.0+no-version-set`. Bake the version in explicitly: pass a build arg before the dependency install (`COMPOSER_ROOT_VERSION=1.2.3`, or the language's equivalent) so the metadata records it, or have the app read a baked env (`APP_BUILD_REF`) that the workflow sets from `github.ref_name`. With Trap A fixed, that ref is deterministically the release tag.
+**Trap B — no version in a `.git`-less build.** A Docker build has no `.git`, so anything that derives the version from git or the package's own metadata reads a placeholder — e.g. Composer's `InstalledVersions::getPrettyVersion(<root-package>)` returns `1.0.0+no-version-set`. Bake the version in explicitly: pass a build arg before the dependency install (`COMPOSER_ROOT_VERSION=1.2.3`, or the language's equivalent) so the metadata records it, or have the app read a baked env (`APP_BUILD_REF`) that the Dockerfile declares and the workflow sets from `github.ref_name`:
+
+```dockerfile
+ARG APP_BUILD_REF
+ENV APP_BUILD_REF=$APP_BUILD_REF
+```
+
+With Trap A fixed, that ref is deterministically the release tag.
 
 ## Local boot-test pitfalls
 
