@@ -4,7 +4,7 @@ description: "Use when YOU (the AI agent) are running on Windows OUTSIDE WSL (Gi
 license: "(MIT AND CC-BY-SA-4.0)"
 compatibility: "Windows host with Docker Desktop using the WSL2 backend."
 metadata:
-  version: "1.11.1"
+  version: "1.11.2"
   repository: "https://github.com/netresearch/docker-development-skill"
   author: "Netresearch DTT GmbH"
 allowed-tools:
