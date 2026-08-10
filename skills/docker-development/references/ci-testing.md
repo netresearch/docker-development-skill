@@ -178,3 +178,124 @@ When smoke/boot-testing an image by hand (not in the CI matrix):
 - **Foreground apps that log to a file leave `docker logs` empty.** E.g. Tomcat started with `-fg` writes to `logs/catalina.out`, not stdout — an empty `docker logs` does *not* mean "nothing happened". Read the in-container log files (`docker exec <c> sh -c 'tail -n 80 .../catalina.out'`), and check the process and state (`docker inspect -f '{{.State.Status}} {{.State.ExitCode}}' <c>`).
 - **Minimal/distroless images have no shell.** `docker exec … sh`/`tail`/`pgrep` won't exist on `scratch`/distroless runtimes — probe with host-side `curl` against a published port, `docker inspect` for state, or a debug sidecar (`docker run --rm --pid container:<c> busybox …`).
 - **Grep for real failure signals, not benign noise.** After a bundled-dependency swap, scan logs for `NoSuchMethodError|AbstractMethodError|LinkageError|IncompatibleClassChangeError` (binary incompatibility) — not bare `ClassNotFoundException`, which OSGi/plugin frameworks emit normally.
+
+## Pattern 7: A build without `target:` builds whatever stage comes last
+
+Not to be confused with Pattern 5: that `target` is a bake target inheriting
+metadata, this one is the Dockerfile stage a build selects. Same word, different
+thing, and reading one does not cover the other.
+
+### Problem
+
+A repository publishes one image from a multi-stage Dockerfile. The build step
+names no target, because there was only ever one final stage:
+
+```yaml
+- uses: docker/build-push-action@…
+  with:
+    context: .
+    tags: ${{ steps.meta.outputs.tags }}   # no target:
+```
+
+Later a second image is added — an nginx to front the php-fpm one — as a stage
+appended after the existing runtime. Nothing in the original build changed, yet
+it now publishes the *new* stage under the *old* name: Docker builds the last
+stage in the file when no target is given.
+
+The failure is silent at build time and loud much later. `php-fpm:latest` was an
+nginx image for an hour; the first symptom was a sidecar dying on
+`exec: "/bin/bash": no such file or directory`.
+
+### Fix
+
+Name the target explicitly in every build, including the one that was there
+first:
+
+```yaml
+- uses: docker/build-push-action@…
+  with:
+    context: .
+    target: runtime          # not "whatever is last"
+```
+
+Then assert what was actually built, in the job that builds it. A smoke test in
+a separate job cannot help here: on a pull request the image never leaves the
+build runner, so that job only runs on the default branch — after publishing.
+
+```yaml
+- name: The image is php-fpm, not the web stage
+  if: github.event_name == 'pull_request'
+  env:
+    TAGS: ${{ steps.meta.outputs.tags }}
+  run: |
+    set -euo pipefail
+    tag="$(printf '%s\n' "$TAGS" | head -n1)"
+    docker run --rm --entrypoint sh "$tag" -c \
+      'command -v php-fpm >/dev/null && ! command -v nginx >/dev/null'
+```
+
+Prove the assertion by running it against *both* images: each must accept its
+own and reject the other. An assertion that only ever sees the correct image
+has not been tested.
+
+### Also check `.dockerignore`
+
+A stage that copies from the build context needs that path allowed. A
+deny-everything file is common and correct:
+
+```
+*
+!rootfs/
+!config/nginx/    # the web stage copies this
+```
+
+Adding a stage means revisiting it — otherwise the build fails on
+`failed to compute cache key: "/config/nginx": not found`, which reads like a
+missing file rather than an excluded one.
+
+## Pattern 8: Verify shell semantics inside the target image, not on the host
+
+### Problem
+
+A CI script compares two scan results and blocks on what a build adds:
+
+```sh
+grep -Fxv -f deployed.txt built.txt > added.txt || true
+if [ -s added.txt ]; then exit 1; fi
+```
+
+The reasoning was: an empty `deployed.txt` matches nothing, so `-v` prints every
+line and all findings count as new — the safe direction. Verified on the
+developer machine, where it holds.
+
+The image is Alpine-based and ships **busybox grep**, which does the opposite: an
+empty pattern file matches everything, `-v` prints nothing, `added.txt` comes out
+empty and the gate passes. And the empty baseline is not an edge case — it is the
+normal state whenever the reference scan is clean.
+
+### Fix
+
+Handle the case explicitly rather than relying on a semantic that differs
+between implementations:
+
+```sh
+if [ ! -s deployed.txt ]; then
+    cp built.txt added.txt
+else
+    grep -Fxv -f deployed.txt built.txt > added.txt || true
+fi
+```
+
+### The general rule
+
+Any assumption about `grep`, `sed`, `awk`, `sort` or `printf` behaviour that a
+CI script depends on has to be checked in the image that will run it:
+
+```sh
+docker run --rm --entrypoint sh <the-ci-image> -c '<the exact expression>'
+```
+
+GNU coreutils on the host and busybox in an Alpine image disagree on more than
+this one case. A local check that passes proves the host's semantics, not the
+container's — and the difference surfaces as a gate that silently waves things
+through, which is the direction nobody notices.
