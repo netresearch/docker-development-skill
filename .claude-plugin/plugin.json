@@ -1,6 +1,6 @@
 {
   "name": "docker-development",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "description": "Docker image development patterns for Dockerfile, docker-compose, docker-bake.hcl, and CI testing",
   "repository": "https://github.com/netresearch/docker-development-skill",
   "license": "(MIT AND CC-BY-SA-4.0)",
