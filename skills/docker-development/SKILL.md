@@ -18,8 +18,6 @@ allowed-tools:
 
 # Docker Development
 
-Patterns for building, testing, and deploying Docker containers.
-
 ## Core Principles
 
 1. **Minimal** -- Alpine/distroless, multi-stage
@@ -134,3 +132,4 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 - `references/dind-testing-patterns.md` -- Docker-in-Docker testing patterns
 - `references/bind-mount-ownership.md` -- root-owned bind-mount artifacts
 - `references/gpg-verification.md` -- gpgv patterns; stale keybox locks
+- `references/registry-catalogue-and-pin-rot.md` -- catalogue probes; pin rot
