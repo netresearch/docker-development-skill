@@ -135,3 +135,4 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 - `references/gpg-verification.md` -- gpgv patterns; stale keybox locks
 - `references/registry-catalogue-and-pin-rot.md` -- catalogue probes; pin rot
 - `references/build-secret-leaks.md` -- `ARG` lands in SLSA provenance
+- `references/php-fpm-worker-starvation.md` -- FastCGI keepalive pins workers
