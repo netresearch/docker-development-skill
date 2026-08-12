@@ -22,8 +22,8 @@ allowed-tools:
 
 1. **Minimal** -- Alpine/distroless, multi-stage
 2. **Secure** -- Non-root USER, no layer secrets, pin versions
-3. **Testable** -- CI-verifiable: entrypoint bypass, DNS mocking
-4. **Cache-efficient** -- deps first, clean in same layer
+3. **Testable** -- entrypoint bypass, DNS mocking
+4. **Cache-efficient** -- deps first, clean in-layer
 
 ## Quick Reference
 
@@ -76,7 +76,7 @@ RUN npm ci
 COPY . .
 ```
 
-Manifests before source keeps install layers cached on source-only changes.
+Manifests before source keeps install layers cached.
 
 ### BuildKit Secrets
 
@@ -84,7 +84,8 @@ Manifests before source keeps install layers cached on source-only changes.
 RUN --mount=type=secret,id=ssh_key,dst=/root/.ssh/id_rsa git clone git@github.com:org/repo.git
 ```
 
-`ENV`/`ARG`/`COPY` secrets persist in `docker history`. Use `--mount=type=secret`.
+`ARG` leaks via `docker history` **and** the pushed image's SLSA provenance --
+`references/build-secret-leaks.md`
 
 ### Docker Bake (Multi-Platform)
 
@@ -113,7 +114,7 @@ target "app" {
 1. **Bypass entrypoint**: `docker run --rm --entrypoint php myimage -v`
 2. **Mock upstream DNS**: `docker run --rm --add-host backend:127.0.0.1 nginx-image nginx -t`
 3. **Compose validation**: `cp .env.example .env` before `docker compose config`
-4. **Secret scanning**: Exclude `.env.example`, README, docs from scanners
+4. **Secret scanning**: exclude `.env.example`, README, docs
 5. **Root-owned artifacts**: root-owned bind-mount dirs (`EACCES`) -- `references/bind-mount-ownership.md`
 
 ## .dockerignore
@@ -123,8 +124,8 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 ## Compose Essentials
 
 - startup ordering: `depends_on.condition: service_healthy` + `healthcheck` `start_period`
-- `networks.internal: true` isolates databases from external access
-- `profiles: [debug]`: services start only with `--profile debug`
+- `networks.internal: true` isolates databases
+- `profiles: [debug]`: start only with `--profile debug`
 
 ## References
 
@@ -133,3 +134,4 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 - `references/bind-mount-ownership.md` -- root-owned bind-mount artifacts
 - `references/gpg-verification.md` -- gpgv patterns; stale keybox locks
 - `references/registry-catalogue-and-pin-rot.md` -- catalogue probes; pin rot
+- `references/build-secret-leaks.md` -- `ARG` lands in SLSA provenance
