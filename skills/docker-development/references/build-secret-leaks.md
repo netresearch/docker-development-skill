@@ -61,3 +61,23 @@ rather than fail.
 Rotation is the only remedy that acts on what is already published — the
 attestations of existing versions keep their copy of the value forever, or until
 someone deletes those package versions. Rotate first, fix the build second.
+
+## The other leak: your own debugging session
+
+A leak does not need buildx provenance to happen. `docker build --progress=plain`
+(or any verbose/raw build log) echoes the literal `RUN` command line with every
+`ARG`/`ENV` already interpolated — so a credential-bearing build arg shows up in
+cleartext the moment that output reaches a terminal, a piped log file, or a
+`tail`. This is a transient leak (nothing gets published), but it lands directly
+in whatever you're capturing the session with — chat transcript, screen
+recording, CI job log — which is exactly the audience `--mount=type=secret` was
+meant to keep it from. It happens even when the project's real Dockerfile is
+already fixed with `--mount=type=secret`, because the leak comes from an ad-hoc
+debug invocation outside that path, not from the build definition.
+
+Treat it the same as a provenance leak once it happens: rotate the credential
+first, then clean up (delete the log file, prune the build cache — the layer
+with the interpolated value may still be cached locally even though it was
+never pushed). Avoid it by not running debug builds with secret-bearing `ARG`s
+through `--progress=plain`/verbose output that you then cat, tail, or pipe
+into something you'll read — redact the known secret value first if you must.
