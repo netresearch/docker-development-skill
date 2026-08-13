@@ -311,12 +311,15 @@ predates the failure and re-running it fails identically, the linter moved,
 not your change.
 
 Policy: treat the new finding as surfaced debt and fix it in the same MR —
-do not pin the hadolint image and do not add an ignore. Pinning hides every
-future rule improvement; the debt only grows.
+do not pin the hadolint image. A scoped `.hadolint.yaml` ignore is reserved
+for rules whose "fix" creates worse breakage — the canonical case is
+DL3008/DL3018 (pinning distro packages breaks on the next mirror sync) — and
+always carries a comment stating that rationale. Pinning the linter instead
+hides every future rule improvement; the debt only grows.
 
 Concrete case (2026-08-13, `docker/node-red`): a hadolint update started
 failing `DL3066` (non-numeric user-id) on `USER root` / `USER node-red`.
-Fix: use the numeric ids the image already establishes —
+Fix: use the numeric ids the Dockerfile already establishes —
 
 ```dockerfile
 USER 0
@@ -325,4 +328,6 @@ USER 10458
 ```
 
 No behavior change, and the id survives environments that cannot resolve
-container-internal user names.
+container-internal user names. (The `apk add` here stays unpinned under the
+DL3018 ignore above — that is the scoped exception in action, not a
+contradiction of it.)
