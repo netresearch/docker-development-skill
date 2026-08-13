@@ -78,3 +78,37 @@ that exemption is written down:
 - **Testing the tag against the literal string `latest`.** `latest-rolling`,
   `latest-alpine` and friends float exactly as much and sail through. Treat a
   `latest-*` or `edge-*` prefix as floating.
+
+## A tag that "should" exist can just not
+
+Don't assume a variant tag exists because the pattern is common elsewhere —
+check the catalogue the same way as above. `composer:2-alpine` is not a real
+tag: the official `composer` image is Alpine-based *at* `composer:2`, so the
+`-alpine` suffix some other images use has nothing to pull. A short,
+unqualified reference like `composer:2` in a `.env`/build-arg also fails
+differently depending on where it resolves: buildah/podman running
+non-interactively enforce short-name resolution and refuse to guess a
+registry, erroring with "short-name resolution enforced but cannot prompt
+without a TTY" instead of defaulting to Docker Hub. Fully qualify it
+(`docker.io/library/composer:2`) rather than relying on the short name to
+resolve the same way it does interactively.
+
+## A push failing "unauthorized" is a role question, not always a credential one
+
+`unauthorized to access repository: <repo>, action: push` from a private
+registry (Harbor and similar) usually reads like a login problem, so the
+instinct is to re-check the password and rebuild. Ask the registry's own RBAC
+API first instead of spending a full build+push cycle per guess — Harbor
+answers this in two read-only calls:
+
+```bash
+curl -s -u "$USER:$TOKEN" https://harbor.example.com/api/v2.0/users/current \
+  | jq '.username'
+curl -s -u "$USER:$TOKEN" "https://harbor.example.com/api/v2.0/projects/<id>/members" \
+  | jq '.[] | select(.entity_name=="'"$USER"'")'
+```
+
+A valid login with no membership entry (or `role_id: null`) for the target
+project means the account has zero role there — no amount of retrying the
+push fixes that; someone with project-admin/Maintainer needs to grant a role
+(Developer is enough to push).
