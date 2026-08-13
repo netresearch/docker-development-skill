@@ -299,3 +299,30 @@ GNU coreutils on the host and busybox in an Alpine image disagree on more than
 this one case. A local check that passes proves the host's semantics, not the
 container's — and the difference surfaces as a gate that silently waves things
 through, which is the direction nobody notices.
+
+## Pattern 9: hadolint's floating `latest` is a feature — fix findings, don't pin
+
+CI lint jobs typically run `hadolint/hadolint:latest-alpine`. A hadolint
+release can turn a previously-quiet rule into a failure overnight, so an
+unrelated MR (a Renovate version bump, a docs change) suddenly goes red.
+
+Diagnose before blaming the diff: if the default branch's last green run
+predates the failure and re-running it fails identically, the linter moved,
+not your change.
+
+Policy: treat the new finding as surfaced debt and fix it in the same MR —
+do not pin the hadolint image and do not add an ignore. Pinning hides every
+future rule improvement; the debt only grows.
+
+Concrete case (2026-08-13, `docker/node-red`): a hadolint update started
+failing `DL3066` (non-numeric user-id) on `USER root` / `USER node-red`.
+Fix: use the numeric ids the image already establishes —
+
+```dockerfile
+USER 0
+RUN apk add --no-cache shadow && usermod -u 10458 node-red && apk del shadow
+USER 10458
+```
+
+No behavior change, and the id survives environments that cannot resolve
+container-internal user names.
