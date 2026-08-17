@@ -523,5 +523,33 @@
         "description": "Identifies the SMB/network-drive path translation inside Docker Desktop's WSL2 backend as the root cause, not a Docker cache or single-file-bind-mount bug"
       }
     ]
+  },
+  {
+    "name": "healthcheck-disable-breaks-compose-wait",
+    "prompt": "My compose worker reuses the web image and was permanently unhealthy because it inherits that image's HEALTHCHECK for php-fpm, which the worker doesn't run. So I added `healthcheck: { disable: true }` to the worker. Now `docker compose up -d --wait` fails in CI. What is going on and how do I fix it?",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "no healthcheck configured|has no health ?check",
+        "description": "Names the compose failure mode: an explicitly listed service without a healthcheck cannot be waited on"
+      },
+      {
+        "type": "content_regex",
+        "value": "(?i)(real|proper|its own|working|actual) health ?check|health ?check .{0,40}instead|(don't|do not|never) disable",
+        "description": "Fixes it by giving the worker a health check of its own rather than disabling the inherited one"
+      },
+      {
+        "type": "content_regex",
+        "value": "(?i)inherit",
+        "description": "Explains that reusing the app image inherits its baked-in HEALTHCHECK, which is why the worker was unhealthy in the first place"
+      }
+    ],
+    "samples": {
+      "passing": "The worker inherits the web image's baked-in HEALTHCHECK, so it probes php-fpm and stays unhealthy. Disabling it does not help: compose refuses to wait on an explicitly listed service and reports 'container worker has no healthcheck configured'. Give the worker a real healthcheck of its own, e.g. a CMD-SHELL pgrep with a character-class guard, and verify it both ways.",
+      "failing": [
+        "Just drop the --wait flag from your docker compose up command and poll the logs instead; the worker does not need a healthcheck.",
+        "That is a Docker Desktop bug. Restart the daemon and rebuild the image with --no-cache."
+      ]
+    }
   }
 ]
