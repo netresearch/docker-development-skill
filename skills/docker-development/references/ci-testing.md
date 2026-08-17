@@ -331,3 +331,36 @@ No behavior change, and the id survives environments that cannot resolve
 container-internal user names. (The `apk add` here stays unpinned under the
 DL3018 ignore above — that is the scoped exception in action, not a
 contradiction of it.)
+
+## Pattern 10: Validating a change to a custom base image needs the real image, not a stand-in
+
+SKILL.md's "Mock upstream DNS" gotcha (`docker run --add-host backend:127.0.0.1
+nginx-image nginx -t`) assumes `nginx-image` really is the image under test.
+When the change under test lives in a *shared/base* image maintained
+elsewhere — one that compiles in extra modules or ships modified system
+files — substituting a generic public image of the same software (e.g.
+`nginx:alpine` in place of a custom nginx+PHP-FPM base image) produces
+unrelated, misleading errors instead of testing the actual change:
+
+```
+$ docker run --rm -v $PWD/rootfs/etc/nginx:/etc/nginx:ro nginx:alpine nginx -t
+nginx: [emerg] getpwnam("www-data") failed          # base has no www-data user
+...
+nginx: [emerg] open() "/etc/nginx/mime.types" failed # base ships mime.types elsewhere
+...
+nginx: [emerg] unknown directive "brotli"            # real image compiles brotli in, nginx:alpine doesn't
+```
+
+None of these are about the change under test — they're artifacts of the
+wrong base. Build or pull the actual image first, then run the check against
+it:
+
+```bash
+docker build --build-arg PHP_VERSION=84 -t custom-image:test .
+docker run --rm --add-host phpfpm:127.0.0.1 --entrypoint sh custom-image:test -c "nginx -t"
+```
+
+This costs one build (or pull, if the base is already published and registry
+auth is already configured), not a rewrite of the stand-in's `/etc/nginx` to
+patch in the missing pieces — that arms race never converges once the real
+base changes again.
