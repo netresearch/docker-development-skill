@@ -37,8 +37,6 @@ runs next, failing for reasons that read like the application's fault:
   owns the output directory
 - `composer install` / `npm ci` aborting on "Could not delete …" for a path the
   host user never created
-- a `git status` that is clean while a build is inexplicably stale, because the
-  artifacts the container wrote are ignored and unreadable to your user
 
 The common shape: the container run succeeded, and the *following* host command
 is the one that fails. Suspect ownership before debugging the failure it reports.
