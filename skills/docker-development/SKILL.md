@@ -126,6 +126,7 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 - startup ordering: `depends_on.condition: service_healthy` + `healthcheck` `start_period`
 - `networks.internal: true` isolates databases
 - `profiles: [debug]`: start only with `--profile debug`
+- shared image ref: define ONCE per file as top-level extension field + anchor -- `x-app-image: &app-image registry/app:${APP_IMAGE_VERSION:-85}`, services use `image: *app-image`. `:-` defaults cover unset AND empty vars (a bare omitted tag silently resolves `:latest`). Anchors are file-local: every overlay file needs its own. Verify both paths: `APP_IMAGE_VERSION= docker compose config` and with an override
 
 ## References
 
