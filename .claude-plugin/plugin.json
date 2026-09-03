@@ -1,6 +1,6 @@
 {
   "name": "docker-development",
-  "version": "1.15.0",
+  "version": "1.15.1",
   "description": "Docker image development patterns for Dockerfile, docker-compose, docker-bake.hcl, and CI testing",
   "author": {
     "name": "Netresearch DTT GmbH",
