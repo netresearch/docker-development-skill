@@ -55,4 +55,5 @@
 - [CI Testing](skills/docker-development/references/ci-testing.md) — CI testing patterns
 - [DinD Patterns](skills/docker-development/references/dind-testing-patterns.md) — Docker-in-Docker testing
 - [Bind-Mount Ownership](skills/docker-development/references/bind-mount-ownership.md) — root-owned bind-mount artifacts
+- [Engine & Image Upgrades](skills/docker-development/references/engine-and-image-upgrades.md) — `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check
 - [WSL Diagnosis & Fix](skills/docker-via-wsl/references/diagnosis-and-fix.md) — wrong-bind-mount diagnosis from a Windows shell
