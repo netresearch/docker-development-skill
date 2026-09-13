@@ -137,3 +137,4 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 - `references/registry-catalogue-and-pin-rot.md` -- catalogue probes; pin rot
 - `references/build-secret-leaks.md` -- `ARG` in provenance
 - `references/php-fpm-worker-starvation.md` -- keepalive pins php-fpm
+- `references/engine-and-image-upgrades.md` -- `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check
