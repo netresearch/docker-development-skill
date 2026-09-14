@@ -39,11 +39,18 @@ ready() {
 for _ in $(seq 1 60); do ready "$c" && break; sleep 5; done
 ```
 
-On an **existing** data directory there is no init phase and no temporary
-server, so that guard never becomes true. Use it when the container was started
-against an empty volume (the seeding case); for a restart, the single
-`ready for connections` of the real server is the right signal, and taking the
-*last* line rather than any line distinguishes them:
+Which server prints it depends on what the container was started against:
+
+| Start | Temporary server? | Guard to use |
+|---|---|---|
+| empty volume (seeding) | yes, runs `initdb.d` | `Temporary server stopped` **and** `ready for connections` |
+| existing data directory, `MARIADB_AUTO_UPGRADE=1` | yes, runs `mariadb-upgrade` | same guard |
+| plain restart | no | last `ready for connections` |
+
+The auto-upgrade case is the one that surprises: an existing data directory does
+get a temporary server, because that is where `mariadb-upgrade` runs. A plain
+restart has none, so the two-condition guard never becomes true there and taking
+the *last* log line rather than any line is what distinguishes it:
 
 ```bash
 docker logs "$c" 2>&1 | tail -5 | grep -q 'ready for connections'
