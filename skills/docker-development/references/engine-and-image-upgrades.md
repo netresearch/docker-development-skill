@@ -1,8 +1,9 @@
 # Engine and Image Upgrades
 
-Two failures that look like an application bug and are not: an engine upgrade
-that silently cuts an old sidecar off from the API, and an image upgrade
-refused on a compatibility claim nobody measured.
+Three failures that look like an application bug and are not: an engine upgrade
+that silently cuts an old sidecar off from the API, an image upgrade refused on
+a compatibility claim nobody measured, and a base image that changes its
+default user under a build that never changed.
 
 ## An engine upgrade raises `MinAPIVersion` and old clients stop seeing anything
 
@@ -58,6 +59,90 @@ separates them.
 
 The fix is to upgrade the sidecar, not to pin the engine back. Pinning works
 and defers the same break to the next unattended security update.
+
+## A base image can change its `USER`, and `--pull` lands it without a commit
+
+A build that ends on `FROM <registry>/<image>:<floating-tag>` plus `docker build
+--pull` re-fetches the base on every run. When the base is rebased — most often
+onto a hardened, non-root variant — the change arrives in your image without a
+commit in your repository, and the first thing it breaks is any `RUN` after the
+`FROM`:
+
+```
+#10 [5/5] RUN chmod -R go-w /etc/mysql/*
+#10 0.216 chmod: changing permissions of '/etc/mysql/conf.d': Operation not permitted
+ERROR: failed to build: process "/bin/sh -c chmod -R go-w /etc/mysql/*" did not complete successfully
+```
+
+`COPY` keeps working — it defaults to `--chown=0:0` regardless of `USER` — so a
+Dockerfile whose only build step is `COPY` survives the same base change
+silently. That asymmetry is why one repo in a fleet breaks and its neighbours do
+not.
+
+Read the base before blaming the build:
+
+```bash
+docker inspect <base-image> --format 'User=[{{.Config.User}}]'
+# User=[999]   -> every RUN below the FROM executes as 999
+```
+
+The fix is to bracket the build-time file operations and return to the runtime
+user, rather than to drop the `RUN`:
+
+```dockerfile
+FROM registry.example.com/mariadb:10.11
+
+# The hardened base runs as uid 999; switch to root for the build-time file
+# operations and back for runtime.
+USER 0
+COPY setup/ /
+RUN chmod -R go-w /etc/mysql/*
+USER 999
+```
+
+Use the numeric id when the base has no `/etc/passwd` entry for `root` —
+`USER root` cannot resolve there and the build fails on the `USER` line itself.
+
+Two consequences show up only at run time, not in the build:
+
+* **A new, empty bind mount is no longer chowned for you.** The official images
+  do that while still running as root at start; a non-root image cannot. Create
+  such a directory as `999:999` (the image's uid) before the first start. An
+  existing data directory already owned by that uid needs nothing, and named
+  volumes are unaffected — Docker copies ownership from the image. See
+  `bind-mount-ownership.md`.
+* **A green build history is not evidence of stability.** Nothing in the
+  repository changed on the day the base did. A daily build that has been green
+  for months can fail tomorrow for a reason no diff shows, so when a scheduled
+  build starts failing without a commit, inspect the base image's `Created`
+  timestamp before reading your own code.
+
+## A major database upgrade logs errors before it succeeds
+
+Starting a newer server against an existing data directory with
+`MARIADB_AUTO_UPGRADE=1` (or `MYSQL_*` equivalents) runs `mariadb-upgrade`
+against the old system tables, and the temporary server complains about them
+while it does:
+
+```
+[ERROR] Incorrect definition of table mysql.column_stats: expected column
+        'hist_type' at position 9 to have type enum(...), found type enum(...)
+```
+
+Those lines are produced **before** `[Entrypoint]: Finished mariadb-upgrade`,
+which is what makes them transient rather than a defect. Do not report them
+from a tail of the log. Split the log at the upgrade line and count each side,
+then restart the container and read only the lines the restart added — a clean
+restart section is the control that proves the upgrade completed:
+
+```bash
+before=$(docker logs "$c" 2>&1 | wc -l)
+docker restart "$c" >/dev/null
+docker logs "$c" 2>&1 | tail -n +$((before + 1)) | grep -c '\[ERROR\]'   # expect 0
+```
+
+Readiness and seed verification for the same containers: see
+`database-container-readiness.md`.
 
 ## Verify an image upgrade with a probe container, never from the changelog
 
