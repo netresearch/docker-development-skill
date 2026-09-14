@@ -10,7 +10,8 @@
 │   └── references/
 │       ├── ci-testing.md               # CI testing patterns for containers
 │       ├── dind-testing-patterns.md    # Docker-in-Docker testing patterns
-│       └── bind-mount-ownership.md     # root-owned bind-mount artifacts
+│       ├── bind-mount-ownership.md     # root-owned bind-mount artifacts
+│       └── database-container-readiness.md  # seeded DB images: init races
 ├── skills/docker-via-wsl/              # Windows: run docker through WSL2
 │   ├── SKILL.md                        # Skill definition
 │   └── references/
@@ -55,5 +56,6 @@
 - [CI Testing](skills/docker-development/references/ci-testing.md) — CI testing patterns
 - [DinD Patterns](skills/docker-development/references/dind-testing-patterns.md) — Docker-in-Docker testing
 - [Bind-Mount Ownership](skills/docker-development/references/bind-mount-ownership.md) — root-owned bind-mount artifacts
-- [Engine & Image Upgrades](skills/docker-development/references/engine-and-image-upgrades.md) — `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check
+- [Engine & Image Upgrades](skills/docker-development/references/engine-and-image-upgrades.md) — `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check; base image changing its `USER`
+- [Database Container Readiness](skills/docker-development/references/database-container-readiness.md) — seeded DB images log `ready for connections` twice
 - [WSL Diagnosis & Fix](skills/docker-via-wsl/references/diagnosis-and-fix.md) — wrong-bind-mount diagnosis from a Windows shell
