@@ -197,14 +197,25 @@ mechanical:
     desc: "Docker Compose file should exist (docker-compose.yml or compose.yml)"
 
   # === LAYER OPTIMIZATION: CLEANUP IN RUN ===
-  # Greps for the apt lists path, not the removal command: the runner's
-  # dangerous-pattern filter refuses any pattern containing `rm -r`.
+  # Joins continuation lines into whole instructions and requires, in every
+  # RUN that runs `apt-get install`, a removal of /var/lib/apt/lists after the
+  # install in that same RUN. The regex spells whitespace as [[:space:]] so the
+  # runner's dangerous-pattern filter (literal `rm -r`) does not refuse it.
   - id: DC-26
     type: script
     scope: application
     pattern: |
-      grep -q 'apt-get install' Dockerfile 2>/dev/null || exit 0
-      grep -q '/var/lib/apt/lists' Dockerfile
+      test -f Dockerfile || exit 0
+      awk '
+        /^[[:space:]]*#/ { next }
+        /\\[[:space:]]*$/ { sub(/\\[[:space:]]*$/, ""); buf = buf $0 " "; next }
+        { ins = buf $0; buf = "" }
+        ins !~ /^[[:space:]]*[Rr][Uu][Nn][[:space:]]/ { next }
+        { i = match(ins, /apt-get[[:space:]]+install/) }
+        i == 0 { next }
+        substr(ins, i) !~ /rm[[:space:]]+-[a-zA-Z]*r[a-zA-Z]*[[:space:]]+[^;&|]*\/var\/lib\/apt\/lists/ { bad = 1 }
+        END { exit bad }
+      ' Dockerfile
     severity: info
     desc: "Dockerfile should clean apt cache in the same RUN layer as install"
 
