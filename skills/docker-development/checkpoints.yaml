@@ -176,12 +176,14 @@ mechanical:
     desc: ".dockerignore should exclude private key files (*.pem, *.key)"
 
   # === COMPOSE HEALTH CHECK ORDERING ===
+  # Only a compose file that declares depends_on can be missing a condition.
   - id: DC-24
     type: script
     scope: application
     pattern: |
       for f in docker-compose.yml compose.yml; do
         test -f "$f" || continue
+        grep -q 'depends_on:' "$f" || continue
         grep -q 'condition:' "$f" || exit 1
       done
       exit 0
@@ -220,12 +222,16 @@ mechanical:
     desc: "Dockerfile should clean apt cache in the same RUN layer as install"
 
   # === INTERNAL NETWORKS ===
+  # Only a compose file that runs a database or cache image has something to
+  # isolate; a single application service has no database to put behind an
+  # internal network.
   - id: DC-27
     type: script
     scope: application
     pattern: |
       for f in docker-compose.yml compose.yml; do
         test -f "$f" || continue
+        grep -qE "image:[[:space:]]*[\"']?([a-z0-9.-]+/)*(postgres|postgis|mysql|mariadb|percona|mongo|redis|valkey|memcached|elasticsearch|opensearch)[:@\"'[:space:]]" "$f" || continue
         grep -q 'internal:' "$f" || exit 1
       done
       exit 0
