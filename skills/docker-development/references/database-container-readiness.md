@@ -28,16 +28,33 @@ a half-imported database, and it does not look like one:
 The third one is the trap: it reads as a broken image, and the container is fine
 two seconds later.
 
-Wait for the transition instead — the entrypoint prints it, and it only happens
-once:
+Wait for the transition instead — but **order matters, and grepping the whole
+log loses it**. The temporary server prints `ready for connections` too, and it
+prints it *before* `Temporary server stopped`, so a guard that asks only whether
+both strings appear anywhere is already true in the gap between the two servers
+— the exact window that produces the `ERROR 2002` above. Read only the log
+*after* the transition:
 
 ```bash
 ready() {
-  docker logs "$1" 2>&1 | grep -q 'Temporary server stopped' &&
-  docker logs "$1" 2>&1 | grep -q 'ready for connections'
+  docker logs "$1" 2>&1 \
+    | sed -n '/Temporary server stopped/,$p' \
+    | grep -q 'ready for connections'
 }
-for _ in $(seq 1 60); do ready "$c" && break; sleep 5; done
+
+for _ in $(seq 1 60); do
+  ready "$c" && break
+  sleep 5
+done
+ready "$c" || { echo "container $c not ready after 300s" >&2; exit 1; }
 ```
+
+The trailing check is not decoration: without it the loop ends on `sleep`, exits
+0 after sixty failed attempts, and hands an unready container to whatever runs
+next. During an auto-upgrade MariaDB may start more than one temporary server,
+and `sed` from the *last* transition is what keeps the guard honest there —
+`sed -n '/Temporary server stopped/,$p'` restarts its range on each match, so it
+ends up emitting the tail after the final one.
 
 Which server prints it depends on what the container was started against:
 
@@ -49,11 +66,21 @@ Which server prints it depends on what the container was started against:
 
 The auto-upgrade case is the one that surprises: an existing data directory does
 get a temporary server, because that is where `mariadb-upgrade` runs. A plain
-restart has none, so the two-condition guard never becomes true there and taking
-the *last* log line rather than any line is what distinguishes it:
+restart has none, so the transition never appears and the guard above never
+becomes true; there, the last lines of the log are the signal:
 
 ```bash
 docker logs "$c" 2>&1 | tail -5 | grep -q 'ready for connections'
+```
+
+## The client binary differs per image
+
+The examples below call `mariadb`. The official MySQL image ships `mysql`
+instead, and the MariaDB image has carried `mariadb` as the primary name since
+10.5 with `mysql` kept as a symlink. Substitute per image rather than copying:
+
+```bash
+client=mariadb   # MySQL image: client=mysql
 ```
 
 ## Prefer TCP over the socket for one-shot checks
