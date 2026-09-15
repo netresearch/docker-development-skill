@@ -120,9 +120,13 @@ Two consequences show up only at run time, not in the build:
 ## A major database upgrade logs errors before it succeeds
 
 Starting a newer server against an existing data directory with
-`MARIADB_AUTO_UPGRADE=1` (or `MYSQL_*` equivalents) runs `mariadb-upgrade`
-against the old system tables, and the temporary server complains about them
-while it does:
+`MARIADB_AUTO_UPGRADE=1` runs `mariadb-upgrade` against the old system tables,
+and the temporary server complains about them while it does. The variable has
+**no `MYSQL_` alias** — the entrypoint's compatibility mapping covers
+`MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`, `MYSQL_USER` and friends, while the
+upgrade branch reads `MARIADB_AUTO_UPGRADE` alone, so `MYSQL_AUTO_UPGRADE=1`
+silently skips the upgrade and the container starts on un-migrated system
+tables:
 
 ```
 [ERROR] Incorrect definition of table mysql.column_stats: expected column
@@ -138,8 +142,28 @@ restart section is the control that proves the upgrade completed:
 ```bash
 before=$(docker logs "$c" 2>&1 | wc -l)
 docker restart "$c" >/dev/null
+
+# `docker logs` still holds the previous run, whose last lines say
+# "ready for connections" — so the wait must look only at what this restart
+# added, and it must fail rather than fall through into the count
+restart_ready() {
+  docker logs "$c" 2>&1 | tail -n +$((before + 1)) | awk '
+    /ready for connections/ { getline v; if (v !~ /port: 0([^0-9]|$)/) ready = 1 }
+    END                     { exit ready ? 0 : 1 }
+  '
+}
+
+for _ in $(seq 1 60); do
+  restart_ready && break
+  sleep 5
+done
+restart_ready || { echo "$c did not come back after the restart" >&2; exit 1; }
+
 docker logs "$c" 2>&1 | tail -n +$((before + 1)) | grep -c '\[ERROR\]'   # expect 0
 ```
+
+The guard is the one from `database-container-readiness.md`, scoped to the lines
+this restart produced.
 
 Readiness and seed verification for the same containers: see
 `database-container-readiness.md`.
