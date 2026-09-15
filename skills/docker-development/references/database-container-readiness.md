@@ -28,18 +28,35 @@ a half-imported database, and it does not look like one:
 The third one is the trap: it reads as a broken image, and the container is fine
 two seconds later.
 
-Wait for the transition instead — but **order matters, and grepping the whole
-log loses it**. The temporary server prints `ready for connections` too, and it
-prints it *before* `Temporary server stopped`, so a guard that asks only whether
-both strings appear anywhere is already true in the gap between the two servers
-— the exact window that produces the `ERROR 2002` above. Read only the log
-*after* the transition:
+Ordering does not rescue this. Two attempts that look right and are not: both
+strings anywhere in the log is true in the gap between the servers, and
+`sed -n '/Temporary server stopped/,$p` starts at the **first** match and runs
+to the end, so with two temporary servers — an auto-upgrade can start several —
+the intermediate announcement falls inside the range. Both were measured
+failing before this text was written.
+
+The log itself carries the distinction, on the line *after* the announcement:
+
+```
+[Note] mariadbd: ready for connections.
+Version: '12.3.2-MariaDB'  socket: '/run/mysqld/mysqld.sock'  port: 0      <- temporary server
+...
+[Note] [Entrypoint]: Temporary server stopped
+[Note] mariadbd: ready for connections.
+Version: '12.3.2-MariaDB'  socket: '/run/mysqld/mysqld.sock'  port: 3306   <- the real one
+```
+
+The temporary server runs with `--skip-networking` and reports `port: 0`. That
+is a property of the server, not of the order, so a guard built on it holds for
+a seeding start, an auto-upgrade with any number of temporary servers, and a
+plain restart alike:
 
 ```bash
 ready() {
-  docker logs "$1" 2>&1 \
-    | sed -n '/Temporary server stopped/,$p' \
-    | grep -q 'ready for connections'
+  docker logs "$1" 2>&1 | awk '
+    /ready for connections/ { getline v; if (v !~ /port: 0([^0-9]|$)/) ready = 1 }
+    END                     { exit ready ? 0 : 1 }
+  '
 }
 
 for _ in $(seq 1 60); do
@@ -51,27 +68,11 @@ ready "$c" || { echo "container $c not ready after 300s" >&2; exit 1; }
 
 The trailing check is not decoration: without it the loop ends on `sleep`, exits
 0 after sixty failed attempts, and hands an unready container to whatever runs
-next. During an auto-upgrade MariaDB may start more than one temporary server,
-and `sed` from the *last* transition is what keeps the guard honest there —
-`sed -n '/Temporary server stopped/,$p'` restarts its range on each match, so it
-ends up emitting the tail after the final one.
+next.
 
-Which server prints it depends on what the container was started against:
-
-| Start | Temporary server? | Guard to use |
-|---|---|---|
-| empty volume (seeding) | yes, runs `initdb.d` | `Temporary server stopped` **and** `ready for connections` |
-| existing data directory, `MARIADB_AUTO_UPGRADE=1` | yes, runs `mariadb-upgrade` | same guard |
-| plain restart | no | last `ready for connections` |
-
-The auto-upgrade case is the one that surprises: an existing data directory does
-get a temporary server, because that is where `mariadb-upgrade` runs. A plain
-restart has none, so the transition never appears and the guard above never
-becomes true; there, the last lines of the log are the signal:
-
-```bash
-docker logs "$c" 2>&1 | tail -5 | grep -q 'ready for connections'
-```
+Measured against a seeded image, polling once a second: the two-`grep` version
+reported ready at tick 6 with the query returning nothing, the `port`-aware one
+at tick 6 of its own run with all 49 tables already present.
 
 ## The client binary differs per image
 

@@ -143,16 +143,27 @@ restart section is the control that proves the upgrade completed:
 before=$(docker logs "$c" 2>&1 | wc -l)
 docker restart "$c" >/dev/null
 
-# the restart returns as soon as the process starts, so wait for the server
-# itself before reading — otherwise the count is taken mid-startup and an
-# error arriving a second later is missed
+# `docker logs` still holds the previous run, whose last lines say
+# "ready for connections" — so the wait must look only at what this restart
+# added, and it must fail rather than fall through into the count
+restart_ready() {
+  docker logs "$c" 2>&1 | tail -n +$((before + 1)) | awk '
+    /ready for connections/ { getline v; if (v !~ /port: 0([^0-9]|$)/) ready = 1 }
+    END                     { exit ready ? 0 : 1 }
+  '
+}
+
 for _ in $(seq 1 60); do
-  docker logs "$c" 2>&1 | tail -5 | grep -q 'ready for connections' && break
+  restart_ready && break
   sleep 5
 done
+restart_ready || { echo "$c did not come back after the restart" >&2; exit 1; }
 
 docker logs "$c" 2>&1 | tail -n +$((before + 1)) | grep -c '\[ERROR\]'   # expect 0
 ```
+
+The guard is the one from `database-container-readiness.md`, scoped to the lines
+this restart produced.
 
 Readiness and seed verification for the same containers: see
 `database-container-readiness.md`.
