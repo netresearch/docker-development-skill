@@ -171,11 +171,11 @@ Readiness and seed verification for the same containers: see
 ## What does this image add over its base?
 
 Before migrating a wrapper image — a base plus a `COPY` — ask whether it still
-earns its existence. Two calls answer it: the layer count against the base, and
-the content of whatever layers are extra.
+earns its existence.
 
-`docker history` answers it directly — it lists the instructions this image adds
-over the one it was built on, newest first, with the size each contributed:
+`docker history` answers that directly — it lists the instructions this image
+adds over the one it was built on, newest first, with the size each
+contributed:
 
 ```bash
 docker history --no-trunc --format '{{.Size}}\t{{.CreatedBy}}' <wrapper> | head -3
@@ -188,7 +188,9 @@ Read from the top until the instructions stop matching the wrapper's Dockerfile;
 everything below that came in with the base. Here that is a single `COPY`, and
 its size is not the size of what it copied — 8.19kB for two 0-byte files is the
 layer's own directory entry and archive overhead, so take the sizes as a signal
-of which instruction added bulk, never as a file listing. Where the files are worth seeing, take them out of the image rather
+of which instruction added bulk, never as a file listing.
+
+Where the files themselves are worth seeing, take them out of the image rather
 than listing the running filesystem — `ls` inside the container shows the base's
 files and the wrapper's together and proves nothing about which layer holds
 what:
@@ -205,8 +207,8 @@ exactly the base image you have locally; a base that has been rebuilt since
 differs in most of its layers, and the diff then reports seven added layers
 where the Dockerfile has one `COPY`. Measured on this exact pair.
 
-One extra layer holding two empty files means the wrapper contributes a pinned
-base tag and nothing else — and, in that particular case, the empty files are
+A single `COPY` of two empty files means the wrapper contributes a pinned base
+tag and nothing else — and, in that particular case, the empty files are
 what breaks a fresh setup, so pointing the consumer at the base image directly
 is both simpler and a fix. The reverse reading matters too: a wrapper carrying a
 real seed or its own configuration is doing a job, and a migration is the right
