@@ -87,10 +87,21 @@ and the second one gets stated wrongly by anyone who tested only the first:
 # empty volume: the seed runs, and a 0-byte .sql.gz kills the container
 docker run --rm -e MARIADB_ROOT_PASSWORD=x "$img"
 # ... unexpected end of file  -> exit 1
+```
 
-# existing data directory: initdb.d is never opened
-docker run -v data:/var/lib/mysql -e MARIADB_ROOT_PASSWORD=x "$img"
-# ... ready for connections, data intact, no initdb.d line in the log
+For the other half the volume has to be **initialised first** — naming a volume
+that does not exist yet creates an empty one, which is the fresh case again and
+reproduces the same failure:
+
+```bash
+docker volume create pre >/dev/null
+docker run -d --name init -v pre:/var/lib/mysql -e MARIADB_ROOT_PASSWORD=x <base-image>
+# wait for readiness, write a marker, then stop it
+docker exec init mariadb -uroot -px -h 127.0.0.1 -e 'create table test.marker(id int)'
+docker stop init
+
+docker run -d -v pre:/var/lib/mysql -e MARIADB_ROOT_PASSWORD=x -e MARIADB_AUTO_UPGRADE=1 "$img"
+# ... ready for connections, marker still there, no initdb.d line in the log
 ```
 
 Before reporting an image as broken, ask which of the two the deployment does.

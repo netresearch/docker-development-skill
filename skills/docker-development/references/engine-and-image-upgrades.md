@@ -174,13 +174,36 @@ Before migrating a wrapper image — a base plus a `COPY` — ask whether it sti
 earns its existence. Two calls answer it: the layer count against the base, and
 the content of whatever layers are extra.
 
+`docker history` answers it directly — it lists the instructions this image adds
+over the one it was built on, newest first, with the size each contributed:
+
 ```bash
-docker image inspect <base>    --format '{{len .RootFS.Layers}}'   # 21
-docker image inspect <wrapper> --format '{{len .RootFS.Layers}}'   # 22
-docker run --rm --entrypoint sh <wrapper> -c 'ls -la /docker-entrypoint-initdb.d'
-# -rw-rw-rw- 1 0 0 0 seed_one.sql.gz
-# -rw-rw-rw- 1 0 0 0 seed_two.sql.gz
+docker history --no-trunc --format '{{.Size}}\t{{.CreatedBy}}' <wrapper> | head -3
+# 8.19kB   COPY dumps/*.sql.gz /docker-entrypoint-initdb.d/ # buildkit
+# 0B       USER 999
+# 20.5kB   RUN /bin/sh -c sed -i ... # buildkit
 ```
+
+Read from the top until the instructions stop matching the wrapper's Dockerfile;
+everything below that came in with the base. Here that is a single `COPY`, and
+its size is not the size of what it copied — 8.19kB for two 0-byte files is the
+layer's own directory entry and archive overhead, so take the sizes as a signal
+of which instruction added bulk, never as a file listing. Where the files are worth seeing, take them out of the image rather
+than listing the running filesystem — `ls` inside the container shows the base's
+files and the wrapper's together and proves nothing about which layer holds
+what:
+
+```bash
+docker create --name x <wrapper> >/dev/null
+docker cp x:/docker-entrypoint-initdb.d - | tar -tvf -
+docker rm x >/dev/null
+```
+
+Do **not** reach for a layer count. `docker image inspect --format '{{len
+.RootFS.Layers}}'` compares two images only when the wrapper was built from
+exactly the base image you have locally; a base that has been rebuilt since
+differs in most of its layers, and the diff then reports seven added layers
+where the Dockerfile has one `COPY`. Measured on this exact pair.
 
 One extra layer holding two empty files means the wrapper contributes a pinned
 base tag and nothing else — and, in that particular case, the empty files are
