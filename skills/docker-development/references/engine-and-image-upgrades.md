@@ -168,6 +168,30 @@ this restart produced.
 Readiness and seed verification for the same containers: see
 `database-container-readiness.md`.
 
+## What does this image add over its base?
+
+Before migrating a wrapper image — a base plus a `COPY` — ask whether it still
+earns its existence. Two calls answer it: the layer count against the base, and
+the content of whatever layers are extra.
+
+```bash
+docker image inspect <base>    --format '{{len .RootFS.Layers}}'   # 21
+docker image inspect <wrapper> --format '{{len .RootFS.Layers}}'   # 22
+docker run --rm --entrypoint sh <wrapper> -c 'ls -la /docker-entrypoint-initdb.d'
+# -rw-rw-rw- 1 0 0 0 seed_one.sql.gz
+# -rw-rw-rw- 1 0 0 0 seed_two.sql.gz
+```
+
+One extra layer holding two empty files means the wrapper contributes a pinned
+base tag and nothing else — and, in that particular case, the empty files are
+what breaks a fresh setup, so pointing the consumer at the base image directly
+is both simpler and a fix. The reverse reading matters too: a wrapper carrying a
+real seed or its own configuration is doing a job, and a migration is the right
+answer there.
+
+Pair it with the consumer question — who pulls this image at all — before
+preparing a change across a fleet of them.
+
 ## Verify an image upgrade with a probe container, never from the changelog
 
 "The new major rejects our configuration" is a claim, and reading release notes

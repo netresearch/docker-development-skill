@@ -74,6 +74,30 @@ Measured against a seeded image, polling once a second: the two-`grep` version
 reported ready at tick 6 with the query returning nothing, the `port`-aware one
 at tick 6 of its own run with all 49 tables already present.
 
+## `initdb.d` runs only against an empty data directory
+
+The entrypoint executes `/docker-entrypoint-initdb.d` when it initialises a data
+directory, and skips it entirely when one is already there. Two consequences,
+and the second one gets stated wrongly by anyone who tested only the first:
+
+* a broken or empty seed breaks a **fresh setup** and nothing else;
+* an image can look thoroughly broken while every running instance is fine.
+
+```bash
+# empty volume: the seed runs, and a 0-byte .sql.gz kills the container
+docker run --rm -e MARIADB_ROOT_PASSWORD=x "$img"
+# ... unexpected end of file  -> exit 1
+
+# existing data directory: initdb.d is never opened
+docker run -v data:/var/lib/mysql -e MARIADB_ROOT_PASSWORD=x "$img"
+# ... ready for connections, data intact, no initdb.d line in the log
+```
+
+Before reporting an image as broken, ask which of the two the deployment does.
+A compose file that mounts a persistent directory (`./data:/var/lib/mysql`) is
+the second case, and a statement about "the published image" that was measured
+in the first case is about a path production never takes.
+
 ## The client binary differs per image
 
 The examples below call `mariadb`. The official MySQL image ships `mysql`
