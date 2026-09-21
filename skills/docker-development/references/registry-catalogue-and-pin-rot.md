@@ -64,6 +64,36 @@ Equal digests across `:latest` and `:X.Y.Z` mean the release tag *is* latest, so
 waiting for an upstream rebuild is not a plan. A moved `last_updated` means any
 claim resting on staleness has expired and needs re-measuring, not repeating.
 
+## In `image:tag@digest` the digest binds and the tag is decoration
+
+Given both, Docker resolves by digest and ignores the tag entirely — a wrong
+tag is accepted in silence, no error, no warning:
+
+```bash
+# the digest below is alpine:3.24.1's, deliberately paired with the 3.23 tag
+$ docker pull alpine:3.23@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+docker.io/library/alpine:3.23@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+$ docker run --rm alpine:3.23@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b cat /etc/alpine-release
+3.24.1
+```
+
+So a scanner that objects to carrying both (SonarCloud `docker:S8431`) has a
+point: the tag is an unverified claim, and a hand-edited digest can leave it
+lying about what actually runs.
+
+**Keep both anyway when Renovate maintains the line.** Renovate's own docs say
+that for a digest without a version, *"digests are tracked as `:latest`"* — so
+dropping the tag does not merely lose documentation, it re-points the update
+stream. A digest bump would then walk the base image across majors instead of
+staying on the pinned series. With the tag present Renovate rewrites tag and
+digest as a unit, which is precisely what stops the tag drifting, and its docs
+describe retaining the tag "for readability" as the intended shape.
+
+The trade-off to state where the line lives, because two scanners will argue
+about it: a theoretically stale tag against a real version jump. Scorecard's
+remediation tip recommends `image:tag@sha256:…` and is right for the wrong
+reason — it never says that only the digest is binding.
+
 ## Floating tags are correct for images you rebuild
 
 The pinning rule is about trust, not about syntax: an image your own CI rebuilds
