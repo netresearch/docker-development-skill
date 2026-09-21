@@ -70,9 +70,10 @@ Given both, Docker resolves by digest and ignores the tag entirely — a wrong
 tag is accepted in silence, no error, no warning:
 
 ```bash
-$ docker pull alpine:3.23@sha256:28bd5fe8…43f8b        # digest is 3.24.1's
-docker.io/library/alpine:3.23@sha256:28bd5fe8…43f8b
-$ docker run --rm alpine:3.23@sha256:28bd5fe8…43f8b cat /etc/alpine-release
+# the digest below is alpine:3.24.1's, deliberately paired with the 3.23 tag
+$ docker pull alpine:3.23@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+docker.io/library/alpine:3.23@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
+$ docker run --rm alpine:3.23@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b cat /etc/alpine-release
 3.24.1
 ```
 
