@@ -295,6 +295,15 @@ CI script depends on has to be checked in the image that will run it:
 docker run --rm --entrypoint sh <the-ci-image> -c '<the exact expression>'
 ```
 
+The same split runs through the **shell**, not just coreutils. `docker compose
+run --rm --entrypoint sh <service> -c '...'` gets busybox `sh`, where bash-isms
+are a syntax error rather than a wrong answer: `${PIPESTATUS[0]}` fails with
+`bad substitution` and takes the whole `-c` string down with it. When that
+string was a verification step, the output disappears and the run looks like it
+produced nothing — the failure is easy to read as "the command printed
+nothing". Use `sh`-portable constructs, or invoke `bash` explicitly if the
+image has it.
+
 GNU coreutils on the host and busybox in an Alpine image disagree on more than
 this one case. A local check that passes proves the host's semantics, not the
 container's — and the difference surfaces as a gate that silently waves things
@@ -364,3 +373,37 @@ This costs one build (or pull, if the base is already published and registry
 auth is already configured), not a rewrite of the stand-in's `/etc/nginx` to
 patch in the missing pieces — that arms race never converges once the real
 base changes again.
+
+## Pattern 11: `timeout` around `docker compose run` kills the client, not the container
+
+Wrapping a long compose command in a host-side timeout does not stop the work:
+
+```sh
+timeout 420 docker compose run --rm terraform ./deploy.sh   # DON'T
+```
+
+`timeout` sends its signal to the `docker compose` CLI. The container it started
+keeps running, detached from the terminal that was watching it, and `--rm` only
+fires when it eventually exits. Anything the process held, it goes on holding —
+a state lock, a database session, an advisory lock. Observed once: a cancelled
+Terraform plan kept a Terraform Cloud workspace locked for over 30 minutes and
+made every later deploy of that workspace fail with `Error acquiring the state
+lock`, while nothing on the host looked like it was still running.
+
+Put the bound **inside** the container instead, so the signal reaches the
+process that matters:
+
+```sh
+docker compose run --rm --entrypoint sh <service> -c 'timeout 150 ./deploy.sh'
+```
+
+When a container has already been orphaned this way, do not `docker kill` it if
+it holds a lock — that leaves the lock behind. Signal the process itself and let
+it unwind:
+
+```sh
+docker exec <container> kill -INT <pid-inside-container>
+```
+
+`docker kill --signal=INT <container>` is not equivalent: it signals PID 1 only,
+and a shell script as PID 1 does not forward the signal to its child.

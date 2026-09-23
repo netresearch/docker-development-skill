@@ -130,7 +130,7 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 
 ## References
 
-- `references/ci-testing.md` -- CI testing patterns for Docker images
+- `references/ci-testing.md` -- CI testing patterns for Docker images; busybox `sh` vs bash in `-c` strings; `timeout` around `docker compose run` orphans the container
 - `references/dind-testing-patterns.md` -- Docker-in-Docker testing patterns
 - `references/bind-mount-ownership.md` -- root-owned bind-mount artifacts
 - `references/gpg-verification.md` -- gpgv patterns; stale keybox locks
