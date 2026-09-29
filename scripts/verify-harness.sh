@@ -199,6 +199,7 @@ check_commands() {
     if [[ -f "Makefile" ]]; then
         found_any=true
         local has_make_issue=false
+        # shellcheck disable=SC2016  # the backticks are literal Markdown code-span delimiters
         while IFS= read -r target; do
             # Check if Makefile defines this target (pattern: "target:" at start of line)
             if ! grep -qE "^${target}[[:space:]]*:" "Makefile"; then
@@ -208,6 +209,7 @@ check_commands() {
         done < <(grep -oE '`make [a-zA-Z0-9_-]+`' "AGENTS.md" 2>/dev/null | sed 's/`make //;s/`//' || true)
         if [[ "$has_make_issue" == false ]]; then
             local make_count
+            # shellcheck disable=SC2016  # the backticks are literal Markdown code-span delimiters
             make_count=$(grep -oE '`make [a-zA-Z0-9_-]+`' "AGENTS.md" 2>/dev/null | sed 's/`make //;s/`//' | wc -l || true)
             if [[ "$make_count" -gt 0 ]]; then
                 pass 2 "All make targets verified (${make_count} targets)"
@@ -219,6 +221,7 @@ check_commands() {
     if [[ -f "composer.json" ]]; then
         found_any=true
         local has_composer_issue=false
+        # shellcheck disable=SC2016  # the backticks are literal Markdown code-span delimiters
         while IFS= read -r script; do
             # Look for the script name in composer.json's scripts section
             # Using grep since jq is optional
@@ -229,6 +232,7 @@ check_commands() {
         done < <(grep -oE '`composer [a-zA-Z0-9:_-]+`' "AGENTS.md" 2>/dev/null | sed 's/`composer //;s/`//' || true)
         if [[ "$has_composer_issue" == false ]]; then
             local composer_count
+            # shellcheck disable=SC2016  # the backticks are literal Markdown code-span delimiters
             composer_count=$(grep -oE '`composer [a-zA-Z0-9:_-]+`' "AGENTS.md" 2>/dev/null | sed 's/`composer //;s/`//' | wc -l || true)
             if [[ "$composer_count" -gt 0 ]]; then
                 pass 2 "All composer scripts verified (${composer_count} scripts)"
@@ -240,6 +244,7 @@ check_commands() {
     if [[ -f "package.json" ]]; then
         found_any=true
         local has_npm_issue=false
+        # shellcheck disable=SC2016  # the backticks are literal Markdown code-span delimiters
         while IFS= read -r script; do
             if ! grep -qE "\"${script}\"" "package.json"; then
                 warn 2 "npm run ${script}: no matching package.json script (warning)"
@@ -248,6 +253,7 @@ check_commands() {
         done < <(grep -oE '`npm run [a-zA-Z0-9:_-]+`' "AGENTS.md" 2>/dev/null | sed 's/`npm run //;s/`//' || true)
         if [[ "$has_npm_issue" == false ]]; then
             local npm_count
+            # shellcheck disable=SC2016  # the backticks are literal Markdown code-span delimiters
             npm_count=$(grep -oE '`npm run [a-zA-Z0-9:_-]+`' "AGENTS.md" 2>/dev/null | sed 's/`npm run //;s/`//' | wc -l || true)
             if [[ "$npm_count" -gt 0 ]]; then
                 pass 2 "All npm scripts verified (${npm_count} scripts)"
