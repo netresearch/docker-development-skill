@@ -32,6 +32,7 @@
 ├── composer.json                       # PHP package metadata
 ├── docs/                               # Architecture and planning docs
 │   ├── ARCHITECTURE.md
+│   ├── SECURITY-ASSURANCE.md
 │   └── exec-plans/
 ├── scripts/
 │   └── verify-harness.sh              # Harness verification script
@@ -65,3 +66,4 @@
 - [Engine & Image Upgrades](skills/docker-development/references/engine-and-image-upgrades.md) — `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check; base image changing its `USER`
 - [Database Container Readiness](skills/docker-development/references/database-container-readiness.md) — seeded DB images log `ready for connections` twice
 - [WSL Diagnosis & Fix](skills/docker-via-wsl/references/diagnosis-and-fix.md) — wrong-bind-mount diagnosis from a Windows shell
+- [Security Assurance](docs/SECURITY-ASSURANCE.md) — security assurance case: threats, trust boundaries, limits
