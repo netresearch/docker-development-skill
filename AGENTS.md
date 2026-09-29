@@ -23,6 +23,8 @@
 │       └── pre-push                    # Git pre-push hook
 ├── evals/
 │   └── evals.json                      # Evaluation definitions
+├── tests/
+│   └── check-plugin-version.sh         # Behavioural tests for Build/
 ├── .github/workflows/                  # CI workflows
 ├── composer.json                       # PHP package metadata
 ├── docs/                               # Architecture and planning docs
@@ -37,6 +39,7 @@
 
 - `bash scripts/verify-harness.sh --format=text --status` — check harness maturity level
 - `bash Build/Scripts/check-plugin-version.sh` — validate plugin version consistency
+- `bash tests/check-plugin-version.sh` — run the behavioural tests (offline; see README "Tests")
 
 ## Rules
 

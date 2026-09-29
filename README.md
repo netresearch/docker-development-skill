@@ -139,6 +139,20 @@ Extended documentation in the skill `references/` directories:
 2. Create a feature branch
 3. Submit a pull request
 
+### Tests
+
+The behavioural tests live in `tests/` and need only bash, git and python3:
+
+```bash
+bash tests/check-plugin-version.sh  # Build/Scripts/check-plugin-version.sh and Build/hooks/pre-push
+```
+
+`tests/check-plugin-version.sh` builds throwaway git repositories and checks that a semver tag at `HEAD` (with or without a `v` prefix) must match the version in `.claude-plugin/plugin.json`, that non-semver tags and untagged commits pass, that an empty version or a missing `plugin.json` fails, and that the pre-push hook passes the result on.
+
+Each check prints `ok` or `FAIL`; a `FAIL` line is followed by the expected and actual exit code and the script's output. The test exits 1 when any check failed. In CI, the Skill Tests workflow (`.github/workflows/tests.yml`) runs every `tests/**/*.sh` on each pull request and on pushes to `main`.
+
+The skills themselves are instructions in Markdown and ship no executable scripts; Skill Validation and Eval Validation check their structure and the eval definitions in `evals/evals.json`. A pull request that adds or changes behaviour in a script adds or updates a check in `tests/` that fails without the change.
+
 ## License
 
 This project uses split licensing:

@@ -1,0 +1,24 @@
+# SPDX-License-Identifier: MIT
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
+
+name: Skill Tests
+
+# Runs this repo's behavioural tests (tests/*.sh) via the skill-repo-skill
+# reusable. The other workflows validate structure, lint and security; none of
+# them executes check-plugin-version.sh or the pre-push hook. Not part of the
+# central skill template, so it carries its own notice.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions: {}
+
+jobs:
+  tests:
+    uses: netresearch/skill-repo-skill/.github/workflows/tests.yml@main
+    permissions:
+      contents: read
+    with:
+      require_tests: true
