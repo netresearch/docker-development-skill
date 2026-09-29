@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+<!-- SPDX-FileCopyrightText: Netresearch DTT GmbH -->
+
 # Docker-in-Docker (DinD) Testing Patterns
 
 Patterns for running Docker inside Docker in CI environments (Molecule, Testcontainers, nested builds).

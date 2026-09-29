@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+<!-- SPDX-FileCopyrightText: Netresearch DTT GmbH -->
+
 # Registry Catalogue Probing and Pin Rot
 
 Two questions that look settled and are not: *does this registry publish image

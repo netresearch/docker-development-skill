@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+<!-- SPDX-FileCopyrightText: Netresearch DTT GmbH -->
+
 # GPG Signature Verification in Image Builds
 
 Patterns for verifying downloaded release tarballs against GPG keys inside

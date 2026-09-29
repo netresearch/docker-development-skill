@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+<!-- SPDX-FileCopyrightText: Netresearch DTT GmbH -->
+
 # Multi-stage caching: keep code-independent installs off the code-copy lineage
 
 **Symptom:** a dev/CI image rebuilds heavy tooling (apt, pecl/xdebug, browser installs, `npm ci`) on **every** source change, even though none of it depends on the code.

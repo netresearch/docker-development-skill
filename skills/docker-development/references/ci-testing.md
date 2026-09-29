@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+<!-- SPDX-FileCopyrightText: Netresearch DTT GmbH -->
+
 # CI Testing Patterns for Docker Images
 
 Deeper CI/CD gotchas beyond the basics. For entrypoint bypass, DNS mocking,

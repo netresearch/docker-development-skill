@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+<!-- SPDX-FileCopyrightText: Netresearch DTT GmbH -->
+
 # Diagnosis and Fix: Wrong Bind Mount from a Windows Shell
 
 Use this when a container's bind mount looks wrong (a phantom directory, an
