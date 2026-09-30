@@ -43,7 +43,7 @@ The skills ship no executable scripts, no container images and no server compone
 | A released archive is tampered with | The release workflow publishes a Cosign-signed `SHA256SUMS.txt` and SLSA build-provenance attestations for the archives | `.github/workflows/release.yml` (calls the skill-repo-skill release reusable) |
 | A secret is committed | Betterleaks scans every push to `main` and every pull request to `main` | `.github/workflows/security.yml` |
 | A vulnerable or malicious dependency is added | Dependency review fails on vulnerabilities of severity high or above in a pull request; Composer Audit checks the Composer dependencies against known advisories; Renovate proposes updates, including pre-commit hook revisions | `.github/workflows/security.yml`, `renovate.json` |
-| Insecure code or workflow patterns | Opengrep fails on findings of severity WARNING or above; zizmor analyses the workflows; ShellCheck runs on every `*.sh` file in Skill Validation | `.github/workflows/security.yml`, `.github/workflows/lint.yml` |
+| Insecure code or workflow patterns | Opengrep (`--config auto --error --severity WARNING`) fails on findings of WARNING-level rules only (ERROR-level rules are not reported, netresearch/typo3-ci-workflows#268); zizmor analyses the workflows; ShellCheck runs on every `*.sh` file in Skill Validation | `.github/workflows/security.yml`, `.github/workflows/lint.yml` |
 | A failing step continues with partial state | `check-plugin-version.sh` and `verify-harness.sh` run with `set -euo pipefail` | the scripts named |
 
 Which of these checks must pass before a pull request can merge is set in the branch protection of `main`, not in this repository.
