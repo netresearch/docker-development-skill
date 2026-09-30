@@ -171,7 +171,8 @@ The security assurance case for this skill (threat model, trust boundaries, coun
 Checks that run on pull requests in this repository:
 
 - Every pull request: Skill Validation (`lint.yml`: skill structure, markdownlint, yamllint, actionlint, JSON syntax, ShellCheck, ruff, checkpoint schema), Eval Validation (`eval-validate.yml`) and Skill Tests (`tests.yml`).
-- Pull requests to `main`: `security.yml` with Betterleaks (secret scanning), zizmor (workflow static analysis), dependency review (fails on vulnerabilities of severity high or above), Composer Audit and Opengrep SAST (`--severity WARNING`: fails on findings of WARNING-level rules only; ERROR-level rules are not reported, see netresearch/typo3-ci-workflows#268); Harness Verification (`harness-verify.yml`) and Template Drift (`check-template-drift.yml`).
+- Pull requests to `main`: `security.yml` with Betterleaks (secret scanning), zizmor (workflow static analysis), dependency review, Composer Audit and Opengrep SAST (both behind a preflight event-gate job); Harness Verification (`harness-verify.yml`) and Template Drift (`check-template-drift.yml`). The organisation's security policy sets when dependency review and Opengrep fail: see [dependencies](https://github.com/netresearch/.github/blob/main/SECURITY.md#dependencies-software-composition-analysis) and [static analysis (SAST)](https://github.com/netresearch/.github/blob/main/SECURITY.md#static-analysis-sast).
+- Also on every pull request: Labeler (`labeler.yml`), the DCO sign-off check, SonarCloud Code Analysis and the CodeRabbit review status (GitHub Apps) and, for dependency-update pull requests, auto-merge (`auto-merge-deps.yml`). CodeQL for `actions` runs through GitHub's default setup.
 
 ## License
 
