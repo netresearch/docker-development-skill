@@ -11,7 +11,7 @@ This document states what a user can expect from this repository in terms of sec
 | --- | --- | --- |
 | Skill instructions for an AI agent | `skills/docker-development/SKILL.md`, `skills/docker-via-wsl/SKILL.md`, `skills/*/references/*.md` | Read by the agent as instructions; not executed. The agent may run the commands they describe in the user's project. |
 | Checkpoints | `skills/docker-development/checkpoints.yaml` | Only when an assessment tool runs its `command` and `script` patterns in a user's project. |
-| Repository checks | `Build/Scripts/check-plugin-version.sh`, `Build/hooks/pre-push`, `scripts/verify-harness.sh`, `tests/*.sh` | In this repository's CI and on contributors' machines. Composer, git and release-archive installs contain them too; nothing in this repository runs them on install. |
+| Repository checks | `Build/Scripts/check-plugin-version.sh`, `Build/hooks/pre-push`, `scripts/verify-harness.sh`, `tests/*.sh` | In this repository's CI and on contributors' machines. Composer and git installs contain them too, and the plugin release archive contains `scripts/verify-harness.sh` (it copies `scripts/`, not `Build/` or `tests/`); nothing in this repository runs them on install. |
 
 The skills ship no executable scripts, no container images and no server component. They store nothing and handle no user accounts.
 
@@ -57,7 +57,7 @@ Which of these checks must pass before a pull request can merge is set in the br
 ## What a user cannot expect
 
 - The skill gives guidance; it does not enforce it. Commands an agent derives from the references run with the user's Docker privileges, and access to the Docker daemon is equivalent to root on the host. Review what an agent proposes to run.
-- The code blocks in `SKILL.md` and the references are examples to adapt. Most image tags in them are pinned to a version line, not to a digest, and every pin ages.
+- The code blocks in `SKILL.md` and the references are examples to adapt. Their image references mix version-line tags, floating tags such as `:latest`, `docker:dind` and `distroless/static:nonroot`, and a few digest pins; every pin ages.
 - The checkpoints run shell commands in the assessed project when an assessment tool executes them; run them only in projects you trust.
 - The LLM review checkpoints (DC-20 to DC-23) are judgements by a model and can miss issues.
 - Security fixes follow the supported-versions rules of the organisation's security policy; older releases may not receive them.
