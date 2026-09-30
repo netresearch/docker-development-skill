@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+<!-- SPDX-FileCopyrightText: Netresearch DTT GmbH -->
+
 # Where a build credential actually leaks
 
 `docker history` is the check everyone runs, and for a multi-stage build it is

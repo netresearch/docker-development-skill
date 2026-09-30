@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+<!-- SPDX-FileCopyrightText: Netresearch DTT GmbH -->
+
 # nginx FastCGI keepalive starves php-fpm
 
 A php-fpm child stays bound to its FastCGI connection for as long as that

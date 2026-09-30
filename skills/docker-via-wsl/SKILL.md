@@ -1,4 +1,6 @@
 ---
+# SPDX-License-Identifier: CC-BY-SA-4.0
+# SPDX-FileCopyrightText: Netresearch DTT GmbH
 name: docker-via-wsl
 description: "Use when YOU (the AI agent) are running on Windows OUTSIDE WSL (Git Bash/MSYS/PowerShell shell) and need to run ANY docker / docker compose command. Docker Desktop runs on the WSL2 engine, so commands must be re-issued INSIDE WSL via wsl.exe -- running them from the Windows shell on a network/SMB drive (Z:, UNC) corrupts bind-mount paths. Does NOT apply if your shell is already inside WSL. Triggers on: docker, docker compose, docker-compose, container, bind mount, volume, 'is a directory', mount source wrong, Windows + Docker Desktop, WSL."
 license: "(MIT AND CC-BY-SA-4.0)"

@@ -1,3 +1,6 @@
+<!-- SPDX-License-Identifier: CC-BY-SA-4.0 -->
+<!-- SPDX-FileCopyrightText: Netresearch DTT GmbH -->
+
 # AGENTS.md — docker-development-skill
 
 ## Repo Structure
@@ -23,10 +26,13 @@
 │       └── pre-push                    # Git pre-push hook
 ├── evals/
 │   └── evals.json                      # Evaluation definitions
+├── tests/
+│   └── check-plugin-version.sh         # Behavioural tests for Build/
 ├── .github/workflows/                  # CI workflows
 ├── composer.json                       # PHP package metadata
 ├── docs/                               # Architecture and planning docs
 │   ├── ARCHITECTURE.md
+│   ├── SECURITY-ASSURANCE.md
 │   └── exec-plans/
 ├── scripts/
 │   └── verify-harness.sh              # Harness verification script
@@ -37,6 +43,7 @@
 
 - `bash scripts/verify-harness.sh --format=text --status` — check harness maturity level
 - `bash Build/Scripts/check-plugin-version.sh` — validate plugin version consistency
+- `bash tests/check-plugin-version.sh` — run the behavioural tests (offline; see README "Tests")
 
 ## Rules
 
@@ -59,3 +66,4 @@
 - [Engine & Image Upgrades](skills/docker-development/references/engine-and-image-upgrades.md) — `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check; base image changing its `USER`
 - [Database Container Readiness](skills/docker-development/references/database-container-readiness.md) — seeded DB images log `ready for connections` twice
 - [WSL Diagnosis & Fix](skills/docker-via-wsl/references/diagnosis-and-fix.md) — wrong-bind-mount diagnosis from a Windows shell
+- [Security Assurance](docs/SECURITY-ASSURANCE.md) — security assurance case: threats, trust boundaries, limits
