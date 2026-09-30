@@ -26,35 +26,43 @@ count=0
 # repo <name> <plugin.json content|-> [tag] — creates a repository with one
 # commit. "-" creates no plugin.json at all.
 repo() {
-    local dir="$WORK/$1"
+    local name="$1" content="$2" tag="${3:-}"
+    local dir="$WORK/$name"
     mkdir -p "$dir"
     git -C "$dir" init -q
-    if [ "$2" != "-" ]; then
+    if [[ "$content" != "-" ]]; then
         mkdir -p "$dir/.claude-plugin"
-        printf '%s\n' "$2" > "$dir/.claude-plugin/plugin.json"
+        printf '%s\n' "$content" > "$dir/.claude-plugin/plugin.json"
         git -C "$dir" add .claude-plugin/plugin.json
     fi
     git -C "$dir" -c user.name=test -c user.email=test@example.invalid \
         -c commit.gpgsign=false commit -q --allow-empty -m init
-    if [ -n "${3:-}" ]; then
-        git -C "$dir" -c tag.gpgsign=false tag "$3"
+    if [[ -n "$tag" ]]; then
+        git -C "$dir" -c tag.gpgsign=false tag "$tag"
     fi
+    return 0
 }
 
-version() { printf '{"name":"t","version":"%s"}' "$1"; }
+version() {
+    local v="$1"
+    printf '{"name":"t","version":"%s"}' "$v"
+    return 0
+}
 
 expect() { # expect <description> <expected-exit> <repo-name> [command]
-    local out rc cmd="${4:-$SCRIPT}"
+    local desc="$1" want="$2" name="$3" cmd="${4:-$SCRIPT}"
+    local out rc
     count=$((count + 1))
-    out=$(cd "$WORK/$3" && bash "$cmd" 2>&1)
+    out=$(cd "$WORK/$name" && bash "$cmd" 2>&1)
     rc=$?
-    if [ "$rc" -eq "$2" ]; then
-        echo "  ok   $1"
+    if [[ "$rc" -eq "$want" ]]; then
+        echo "  ok   $desc"
     else
-        echo "  FAIL $1 (expected exit $2, got $rc)"
+        echo "  FAIL $desc (expected exit $want, got $rc)"
         printf '%s\n' "$out" | sed 's/^/         /'
         fail=1
     fi
+    return 0
 }
 
 echo "check-plugin-version.sh"
@@ -86,7 +94,7 @@ expect "hook passes when the tag matches" 0 matching "$HOOK"
 expect "hook fails when the tag does not match" 1 mismatch "$HOOK"
 
 echo
-if [ "$fail" -ne 0 ]; then
+if [[ "$fail" -ne 0 ]]; then
     echo "check-plugin-version.sh: FAILED ($count checks)"
     exit 1
 fi
