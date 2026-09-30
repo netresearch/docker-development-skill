@@ -37,7 +37,7 @@ The skills ship no executable scripts, no container images and no server compone
 | A container runs with more privilege than it needs (CWE-250) | The skill's examples create and switch to a non-root user or use a `nonroot` distroless base; the anti-pattern table names `privileged: true`, `chmod 777` and a host root mount | `SKILL.md` ("Quick Reference", "Security Anti-Patterns") |
 | A service is reachable from the network unintentionally | The anti-pattern table replaces a `0.0.0.0` port binding with `127.0.0.1`; the compose section recommends `networks.internal: true` for databases, which checkpoint DC-27 checks | `SKILL.md` ("Security Anti-Patterns", "Compose Essentials"), `checkpoints.yaml` (DC-27) |
 | An unverified or drifting base image or download is built into an image (CWE-494) | The skill recommends pinned versions over `:latest`; the references explain verifying release tarballs with `gpgv` and how digest pins behave | `SKILL.md`, `references/gpg-verification.md`, `references/registry-catalogue-and-pin-rot.md`, `checkpoints.yaml` (DC-17) |
-| Secret files are sent in the build context | The skill lists `.env*`, `*.pem` and `*.key` for `.dockerignore`; checkpoints DC-14, DC-18 and DC-19 check it | `SKILL.md` (".dockerignore"), `checkpoints.yaml` |
+| Secret files are sent in the build context | The skill lists `.env*`, `*.pem` and `*.key` for `.dockerignore`; checkpoints DC-18 (`.env`) and DC-19 (`*.pem`, `*.key`) check it | `SKILL.md` (".dockerignore"), `checkpoints.yaml` |
 | A checkpoint modifies the assessed project | Every `command` and `script` pattern uses only `find`, `grep`, `awk` and `test` on files in the project and writes nothing | `checkpoints.yaml` (preconditions, DC-19, DC-24 to DC-27) |
 | A release is tagged with a version that disagrees with `plugin.json` | The pre-push hook (enabled by `.envrc` through `core.hooksPath`) runs `check-plugin-version.sh`, which fails when a semver tag at `HEAD` differs from `.claude-plugin/plugin.json` | `Build/hooks/pre-push`, `Build/Scripts/check-plugin-version.sh`; `tests/check-plugin-version.sh` |
 | A released archive is tampered with | The release workflow publishes a Cosign-signed `SHA256SUMS.txt` and SLSA build-provenance attestations for the archives | `.github/workflows/release.yml` (calls the skill-repo-skill release reusable) |
@@ -57,7 +57,7 @@ Which of these checks must pass before a pull request can merge is set in the br
 ## What a user cannot expect
 
 - The skill gives guidance; it does not enforce it. Commands an agent derives from the references run with the user's Docker privileges, and access to the Docker daemon is equivalent to root on the host. Review what an agent proposes to run.
-- The code blocks in `SKILL.md` and the references are examples to adapt. Image tags in them are pinned to a version line, not to a digest, and age like any pin.
+- The code blocks in `SKILL.md` and the references are examples to adapt. Most image tags in them are pinned to a version line, not to a digest, and every pin ages.
 - The checkpoints run shell commands in the assessed project when an assessment tool executes them; run them only in projects you trust.
 - The LLM review checkpoints (DC-20 to DC-23) are judgements by a model and can miss issues.
 - Security fixes follow the supported-versions rules of the organisation's security policy; older releases may not receive them.
