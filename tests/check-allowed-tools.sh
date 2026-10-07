@@ -42,22 +42,33 @@ if not m:
 # argument pattern that itself contains spaces.
 TOOL = re.compile(r"[A-Za-z_][\w-]*(?:\([^)]*\))?")
 entries = []
-in_list = False
+mode = None  # "list" after a bare key, "block" after a | or > scalar
 for line in m.group(1).splitlines():
     key = re.match(r"allowed-tools:(.*)$", line)
     if key:
         inline = key.group(1).strip()
-        if inline:
-            entries += TOOL.findall(inline)
+        if re.fullmatch(r"[|>][-+]?[0-9]?", inline):
+            mode = "block"
+        elif inline:
+            found = TOOL.findall(inline)
+            if not found:
+                print(f"allowed-tools value not understood: {inline}")
+                sys.exit(1)
+            entries += found
         else:
-            in_list = True
+            mode = "list"
         continue
-    if in_list:
+    if mode == "list":
         item = re.match(r"\s*-\s+(.*?)\s*$", line)
         if item:
             entries.append(item.group(1).strip("\"'"))
             continue
-        in_list = False
+        mode = None
+    elif mode == "block":
+        if line.startswith((" ", "\t")) or not line.strip():
+            entries += TOOL.findall(line)
+            continue
+        mode = None
 other = [e for e in entries if e not in READ_ONLY]
 if other:
     print("not read-only: " + ", ".join(other))
