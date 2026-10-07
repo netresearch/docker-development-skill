@@ -96,8 +96,9 @@ applied after that mount and cover it. Example: an `nginx:alpine` service with
 `/run/php-fpm` that carries the php-fpm unix socket. On Docker Engine 29.8.2 the
 tmpfs landed on top of the volume: nginx saw no socket and every PHP request
 returned `502`, while the healthcheck, which requests a static location, stayed
-green. GitHub-hosted CI passed with the same compose file, so the outcome
-depends on the engine's mount ordering.
+green. GitHub-hosted CI passed with the same compose file. The Compose
+documentation does not define which of two overlapping mounts wins, so treat
+the outcome as environment-dependent rather than as a rule you can rely on.
 
 Never mount a tmpfs on a parent of another mount in the same service. Give it a
 dedicated narrow path instead:
@@ -112,9 +113,10 @@ services:
       - php-fpm-socket:/run/php-fpm
 ```
 
-with `pid /run/nginx/nginx.pid;` in `nginx.conf`. To see which mount won, read
-the mount table inside the container — the later of two overlapping entries is
-the one in effect:
+with `pid /run/nginx/nginx.pid;` in `nginx.conf`. To see what the container
+actually got, read its mount table. In the failing case it listed the volume at
+`/run/php-fpm` first and the tmpfs at `/run` after it, and the socket was not
+visible:
 
 ```bash
 docker compose exec web cat /proc/mounts
