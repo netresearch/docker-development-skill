@@ -17,7 +17,6 @@ allowed-tools:
   - "Bash(docker inspect:*)"
   - "Bash(docker history:*)"
   - "Bash(docker logs:*)"
-  - "Bash(docker compose config:*)"
   - "Bash(docker compose ps:*)"
   - "Bash(grep:*)"
   - "Read"

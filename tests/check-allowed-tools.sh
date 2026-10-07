@@ -29,7 +29,7 @@ READ_ONLY = {
     "Bash(grep:*)", "Bash(uname:*)",
     "Bash(docker version:*)", "Bash(docker info:*)", "Bash(docker ps:*)",
     "Bash(docker images:*)", "Bash(docker inspect:*)", "Bash(docker history:*)",
-    "Bash(docker logs:*)", "Bash(docker compose config:*)", "Bash(docker compose ps:*)",
+    "Bash(docker logs:*)", "Bash(docker compose ps:*)",
 }
 
 text = open(sys.argv[1], encoding="utf-8").read()
@@ -37,16 +37,25 @@ m = re.match(r"---\n(.*?)\n---\n", text, re.S)
 if not m:
     print("no front matter")
     sys.exit(1)
+# allowed-tools may be a YAML list (indented or not) or a string of tools
+# separated by spaces or commas; a tool name may carry a parenthesised
+# argument pattern that itself contains spaces.
+TOOL = re.compile(r"[A-Za-z_][\w-]*(?:\([^)]*\))?")
 entries = []
 in_list = False
 for line in m.group(1).splitlines():
-    if re.match(r"allowed-tools:\s*$", line):
-        in_list = True
+    key = re.match(r"allowed-tools:(.*)$", line)
+    if key:
+        inline = key.group(1).strip()
+        if inline:
+            entries += TOOL.findall(inline)
+        else:
+            in_list = True
         continue
     if in_list:
-        item = re.match(r"\s+-\s+\"?([^\"]*)\"?\s*$", line)
+        item = re.match(r"\s*-\s+(.*?)\s*$", line)
         if item:
-            entries.append(item.group(1))
+            entries.append(item.group(1).strip("\"'"))
             continue
         in_list = False
 other = [e for e in entries if e not in READ_ONLY]
