@@ -144,13 +144,16 @@ Extended documentation in the skill `references/` directories:
 
 ### Tests
 
-The behavioural tests live in `tests/` and need only bash, git and python3:
+The behavioural tests live in `tests/` and need bash, git and python3; `tests/check-allowed-tools.sh` also needs yq (v4):
 
 ```bash
 bash tests/check-plugin-version.sh  # Build/Scripts/check-plugin-version.sh and Build/hooks/pre-push
+bash tests/check-allowed-tools.sh   # allowed-tools in every skills/*/SKILL.md
 ```
 
 `tests/check-plugin-version.sh` builds throwaway git repositories and checks that a semver tag at `HEAD` (with or without a `v` prefix) must match the version in `.claude-plugin/plugin.json`, that non-semver tags and untagged commits pass, that an empty version or a missing `plugin.json` fails, and that the pre-push hook passes the result on.
+
+`tests/check-allowed-tools.sh` reads the `allowed-tools` list of every `skills/*/SKILL.md` and fails when an entry is not one of the read-only tools it names (`Read`, `Glob`, `Grep`, `grep`, `uname` and the read-only `docker` subcommands `version`, `info`, `ps`, `images`, `inspect`, `history`, `logs`). It reads the front matter with yq, so a YAML list and a string of tools are read in every YAML form; it needs bash, yq (v4) and python3.
 
 Each check prints `ok` or `FAIL`; a `FAIL` line is followed by the expected and actual exit code and the script's output. The test exits 1 when any check failed. In CI, the Skill Tests workflow (`.github/workflows/tests.yml`) runs every `tests/**/*.sh` on each pull request and on pushes to `main`.
 

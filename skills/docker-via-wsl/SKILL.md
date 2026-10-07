@@ -10,8 +10,10 @@ metadata:
   repository: "https://github.com/netresearch/docker-development-skill"
   author: "Netresearch DTT GmbH"
 allowed-tools:
-  - "Bash(wsl.exe:*)"
-  - "Bash(docker:*)"
+  - "Bash(docker version:*)"
+  - "Bash(docker info:*)"
+  - "Bash(docker ps:*)"
+  - "Bash(docker inspect:*)"
   - "Bash(uname:*)"
   - "Read"
   - "Glob"

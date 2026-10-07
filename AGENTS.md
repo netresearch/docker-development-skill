@@ -27,7 +27,8 @@
 ├── evals/
 │   └── evals.json                      # Evaluation definitions
 ├── tests/
-│   └── check-plugin-version.sh         # Behavioural tests for Build/
+│   ├── check-plugin-version.sh         # Behavioural tests for Build/
+│   └── check-allowed-tools.sh          # allowed-tools stay read-only
 ├── .github/workflows/                  # CI workflows
 ├── composer.json                       # PHP package metadata
 ├── docs/                               # Architecture and planning docs
@@ -44,6 +45,7 @@
 - `bash scripts/verify-harness.sh --format=text --status` — check harness maturity level
 - `bash Build/Scripts/check-plugin-version.sh` — validate plugin version consistency
 - `bash tests/check-plugin-version.sh` — run the behavioural tests (offline; see README "Tests")
+- `bash tests/check-allowed-tools.sh` — check that every `allowed-tools` entry in `skills/*/SKILL.md` is read-only
 
 ## Rules
 
