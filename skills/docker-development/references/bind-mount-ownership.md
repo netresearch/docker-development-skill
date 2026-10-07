@@ -87,3 +87,37 @@ A named volume mounted over a path (e.g. `public/`) is populated from the
 image **only on first use**. After deploying a new image, the volume still
 holds the **old** content — refresh it explicitly (temp container +
 `docker cp`/rsync) or recreate the volume as part of the deploy.
+
+## Related Gotcha: A tmpfs on a Parent Path Hides a Volume Below It
+
+A `tmpfs` mounted on a parent of another mount in the same service can be
+applied after that mount and cover it. Example: an `nginx:alpine` service with
+`tmpfs: [/var/run]` (`/var/run` is a symlink to `/run`) and a named volume at
+`/run/php-fpm` that carries the php-fpm unix socket. On Docker Engine 29.8.2 the
+tmpfs landed on top of the volume: nginx saw no socket and every PHP request
+returned `502`, while the healthcheck, which requests a static location, stayed
+green. GitHub-hosted CI passed with the same compose file. The Compose
+documentation does not define which of two overlapping mounts wins, so treat
+the outcome as environment-dependent rather than as a rule you can rely on.
+
+Never mount a tmpfs on a parent of another mount in the same service. Give it a
+dedicated narrow path instead:
+
+```yaml
+services:
+  web:
+    image: nginx:alpine
+    tmpfs:
+      - /run/nginx          # not /var/run or /run
+    volumes:
+      - php-fpm-socket:/run/php-fpm
+```
+
+with `pid /run/nginx/nginx.pid;` in `nginx.conf`. To see what the container
+actually got, read its mount table. In the failing case it listed the volume at
+`/run/php-fpm` first and the tmpfs at `/run` after it, and the socket was not
+visible:
+
+```bash
+docker compose exec web cat /proc/mounts
+```
