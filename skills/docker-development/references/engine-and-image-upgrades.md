@@ -120,6 +120,36 @@ Two consequences show up only at run time, not in the build:
   build starts failing without a commit, inspect the base image's `Created`
   timestamp before reading your own code.
 
+## PHP 8.5 compiles OPcache into the core, and `docker-php-ext-install opcache` fails
+
+On the official `php:8.5-*` images OPcache is no longer a shared extension, so a
+Dockerfile carried over from 8.3/8.4 stops in the extension build:
+
+```
+make install-modules
+cp: can't stat 'modules/*': No such file or directory
+```
+
+A Dockerfile that must build on 8.3/8.4 and on 8.5 installs it only where it is
+missing. `php -m` lists it as `Zend OPcache`, not `opcache`:
+
+```dockerfile
+RUN docker-php-ext-install pdo_mysql intl \
+    && { php -m | grep -qix 'zend opcache' || docker-php-ext-install opcache; }
+```
+
+Keep the check as its own step. Written as an unquoted `$(…)` inside the
+extension list, it is word-split by the shell, and hadolint flags it as SC2046.
+hadolint still reports DL4006 for the pipe; set
+`SHELL ["/bin/ash", "-eo", "pipefail", "-c"]` where the repository enforces it.
+
+Measured 2026-10-07 with `php:8.5-fpm-alpine3.24` (PHP 8.5.11) and
+`php:8.4-fpm-alpine3.24` (PHP 8.4.26): with the guard, both images build and
+load Zend OPcache. The same day the official 8.3 and 8.4 images already shipped
+`conf.d/docker-php-ext-opcache.ini` and listed `Zend OPcache` before any install,
+so on official images the install branch never runs and `opcache` can simply be
+dropped from the list. The guard matters where the base image varies.
+
 ## A major database upgrade logs errors before it succeeds
 
 Starting a newer server against an existing data directory with

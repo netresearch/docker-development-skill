@@ -139,10 +139,10 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 
 - `references/ci-testing.md` -- CI testing patterns for Docker images
 - `references/dind-testing-patterns.md` -- Docker-in-Docker testing patterns
-- `references/bind-mount-ownership.md` -- root-owned bind-mount artifacts
+- `references/bind-mount-ownership.md` -- root-owned bind-mount artifacts; a tmpfs on a parent path hiding a volume below it
 - `references/gpg-verification.md` -- gpgv patterns; stale keybox locks
 - `references/registry-catalogue-and-pin-rot.md` -- catalogue probes; pin rot
 - `references/build-secret-leaks.md` -- `ARG` in provenance
 - `references/php-fpm-worker-starvation.md` -- keepalive pins php-fpm
-- `references/engine-and-image-upgrades.md` -- `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check; a base image changing its `USER`
+- `references/engine-and-image-upgrades.md` -- `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check; a base image changing its `USER`; PHP 8.5 OPcache built into the core
 - `references/database-container-readiness.md` -- seeded DB images log `ready for connections` twice; verify the seed, not the log
