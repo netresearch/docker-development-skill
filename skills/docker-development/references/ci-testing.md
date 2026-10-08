@@ -449,9 +449,9 @@ timeout 420 docker compose run --rm terraform ./deploy.sh   # DON'T
 `docker compose run` passes the signal from `timeout` on to the container
 (checked with Docker Compose 5.6.0, no TTY). Whether the work stops depends on
 PID 1 inside it. PID 1 ignores a signal it has no handler for, and a shell
-script as PID 1 does not forward the signal to its children. The CLI exits with
-124, the container keeps running, and `--rm` only fires when it eventually
-exits. Anything the process held, it goes on holding — a state lock, a database
+script as PID 1 does not forward the signal to its children. The host-side
+`timeout` returns its timeout status (124 with GNU coreutils), the container
+keeps running, and `--rm` removes it only after it exits. Anything the process held, it goes on holding — a state lock, a database
 session, an advisory lock. Observed once: a cancelled Terraform plan kept a
 Terraform Cloud workspace locked for over 30 minutes and made every later
 deploy of that workspace fail with `Error acquiring the state lock`, while
