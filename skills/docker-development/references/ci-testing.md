@@ -400,3 +400,30 @@ This costs one build (or pull, if the base is already published and registry
 auth is already configured), not a rewrite of the stand-in's `/etc/nginx` to
 patch in the missing pieces — that arms race never converges once the real
 base changes again.
+
+## Pattern 11: A check that only proves an absence needs a positive control
+
+A CI step often asserts that something is *missing*: no `X-Powered-By`
+header, no line in a diff, no match in a log. Such a step also passes when
+the thing under test failed in a way that removes the evidence, because the
+failure produces the same absence. Pair each absence with a statement that
+only the working case can make.
+
+Two cases, both caught in review rather than by the step itself:
+
+- **"nginx served the static file, PHP did not see it."** The step checked
+  that the response has no `X-Powered-By` header. nginx's own 404 has none
+  either, so a missing file passed. Require the status as well:
+
+  ```sh
+  curl -sS -o /dev/null -D headers.txt -w '%{http_code}' "$URL/lib/requirejs/require.min.js" > status.txt
+  test "$(cat status.txt)" = 200 && ! grep -qi '^x-powered-by:' headers.txt
+  ```
+
+- **"The two trees are identical."** Equal checksum lists passed for a tree
+  with an extra empty directory, because `find -type f` gives it no line.
+  Compare the sorted `find . -type d` lists as well (see Pattern 8, busybox
+  `diff -r`).
+
+Before trusting such a step, make it fail once: feed it the broken case it
+exists for (a path that 404s, an extra empty directory) and watch it go red.
