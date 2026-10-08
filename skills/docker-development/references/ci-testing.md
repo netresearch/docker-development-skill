@@ -416,8 +416,8 @@ Two cases, both caught in review rather than by the step itself:
   either, so a missing file passed. Require the status as well:
 
   ```sh
-  curl -sS -o /dev/null -D headers.txt -w '%{http_code}' "$URL/lib/requirejs/require.min.js" > status.txt
-  test "$(cat status.txt)" = 200 && ! grep -qi '^x-powered-by:' headers.txt
+  curl -sS -o /dev/null -D headers.txt -w '%{http_code}' "$URL/lib/requirejs/require.min.js" > status.txt &&
+    test "$(cat status.txt)" = 200 && ! grep -qi '^x-powered-by:' headers.txt
   ```
 
 - **"The two trees are identical."** Equal checksum lists passed for a tree
