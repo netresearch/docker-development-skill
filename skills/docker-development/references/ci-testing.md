@@ -303,6 +303,35 @@ this one case. A local check that passes proves the host's semantics, not the
 container's — and the difference surfaces as a gate that silently waves things
 through, which is the direction nobody notices.
 
+### busybox `diff -r` says nothing about a directory on one side only
+
+Comparing two trees inside an Alpine container — the sources an image ships
+against the volume a running site uses, for example — `diff -rq` looks like the
+obvious tool. busybox `diff -r` reports a file that exists on one side only and
+a file whose content differs, but **a directory that exists on one side only
+produces no line at all**. The exit status is still 1, so the run "found
+something" while the listing shows nothing of it:
+
+```sh
+mkdir -p a b/y; echo n > b/y/f
+diff -rq a b; echo "rc=$?"
+# GNU diff:     Only in b: y      rc=1
+# busybox diff:                   rc=1
+```
+
+A plugin directory present in a volume but not in the image is exactly this
+shape, and a listing that leaves it out reads as "the trees match apart from
+config.php". Compare checksum lists instead, and diff them where GNU `diff` runs:
+
+```sh
+docker run --rm -v vol:/v:ro alpine:3 sh -c 'cd /v && find . -type f -exec md5sum {} +' \
+  | sort -k2 > volume.md5
+diff image.md5 volume.md5
+```
+
+Reconcile the counts (`wc -l` of both lists) against the differences before
+believing the result.
+
 ## Pattern 9: hadolint's floating `latest` is a feature — fix findings, don't pin
 
 CI lint jobs typically run `hadolint/hadolint:latest-alpine`. A hadolint
