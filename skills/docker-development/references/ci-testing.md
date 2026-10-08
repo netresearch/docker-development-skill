@@ -321,12 +321,16 @@ diff -rq a b; echo "rc=$?"
 
 A plugin directory present in a volume but not in the image is exactly this
 shape, and a listing that leaves it out reads as "the trees match apart from
-config.php". Compare checksum lists instead, and diff them where GNU `diff` runs:
+config.php". Compare checksum lists instead, and diff them where GNU `diff` runs.
+A checksum list has no line for an empty directory, so compare the directory
+lists as well:
 
 ```sh
 docker run --rm -v vol:/v:ro alpine:3 sh -c 'cd /v && find . -type f -exec md5sum {} +' \
   | sort -k2 > volume.md5
+docker run --rm -v vol:/v:ro alpine:3 sh -c 'cd /v && find . -type d' | sort > volume.dirs
 diff image.md5 volume.md5
+diff image.dirs volume.dirs
 ```
 
 Reconcile the counts (`wc -l` of both lists) against the differences before
