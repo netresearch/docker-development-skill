@@ -298,6 +298,15 @@ CI script depends on has to be checked in the image that will run it:
 docker run --rm --entrypoint sh <the-ci-image> -c '<the exact expression>'
 ```
 
+The same split runs through the **shell**, not just coreutils. `docker compose
+run --rm --entrypoint sh <service> -c '...'` gets busybox `sh`, where bash-isms
+are a syntax error rather than a wrong answer: `${PIPESTATUS[0]}` aborts the
+`-c` string at that line with `bad substitution` and exit 2. Everything before
+the line has run; the line and everything after it have not. If stderr is
+discarded or a pipe hides the exit code, the step looks as if it printed
+nothing. Use `sh`-portable constructs, or invoke `bash` explicitly if the image
+has it.
+
 GNU coreutils on the host and busybox in an Alpine image disagree on more than
 this one case. A local check that passes proves the host's semantics, not the
 container's — and the difference surfaces as a gate that silently waves things
@@ -427,3 +436,64 @@ Two cases, both caught in review rather than by the step itself:
 
 Before trusting such a step, make it fail once: feed it the broken case it
 exists for (a path that 404s, an extra empty directory) and watch it go red.
+
+## Pattern 12: `timeout` around `docker compose run` stops nothing when PID 1 ignores the signal
+
+Wrapping a long compose command in a host-side timeout does not reliably stop
+the work:
+
+```sh
+timeout 420 docker compose run --rm terraform ./deploy.sh   # DON'T
+```
+
+`docker compose run` passes the signal from `timeout` on to the container
+(checked with Docker Compose 5.6.0, no TTY). Whether the work stops depends on
+PID 1 inside it. PID 1 ignores a signal it has no handler for, and a shell
+script as PID 1 does not forward the signal to its children. The host-side
+`timeout` returns its timeout status (124 with GNU coreutils), the container
+keeps running, and `--rm` removes it only after it exits. Anything the process held, it goes on holding — a state lock, a database
+session, an advisory lock. Observed once: a cancelled Terraform plan kept a
+Terraform Cloud workspace locked for over 30 minutes and made every later
+deploy of that workspace fail with `Error acquiring the state lock`, while
+nothing on the host looked like it was still running. The Compose version and
+TTY mode of that run are not known.
+
+| Service command | After `timeout 4 docker compose run <service>` |
+| --- | --- |
+| `sh -c "trap '...' TERM INT; sleep 300 & wait"` | exited 0, the trap ran |
+| `sleep 300` (PID 1, no handler) | still running |
+| `sleep 300` with `init: true` | exited 143 |
+
+The fix is to make the signal reach the process that holds the lock, and that
+process has to be the **direct child** of whatever sends it:
+
+- End `deploy.sh` with `exec terraform ...`, or call the binary directly
+  instead of through a script. Without that, neither of the next two options
+  reaches Terraform.
+- Put the bound inside the container:
+
+  ```sh
+  docker compose run --rm --entrypoint sh <service> -c 'timeout -s INT 150 ./deploy.sh'
+  ```
+
+  `-s INT` sends the same signal as the recovery below. Busybox `timeout`
+  signals only its direct child; GNU `timeout` signals the whole process group.
+  In an Alpine-based image, a `deploy.sh` that starts `terraform` as a child
+  gets the signal itself, `terraform` never does, and it is SIGKILLed when the
+  container's PID 1 exits — the lock stays behind.
+- Or give the service an init as PID 1 (`init: true`, `docker run --init`). The
+  init forwards the signal to its direct child only, so it needs the `exec` as
+  well.
+
+When a container has already been orphaned this way, do not `docker kill` it if
+it holds a lock — that leaves the lock behind. Signal the process itself and let
+it unwind. `docker top` lists host PIDs, which `kill` inside the container does
+not know; list the processes from inside instead:
+
+```sh
+docker exec <container> ps -o pid,args
+docker exec <container> kill -INT <pid-inside-container>
+```
+
+`docker kill --signal=INT <container>` is not equivalent: it signals PID 1 only,
+and a shell script as PID 1 does not forward the signal to its child.
