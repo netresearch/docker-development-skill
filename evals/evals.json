@@ -283,6 +283,27 @@
     ]
   },
   {
+    "name": "compose-profile-retire",
+    "prompt": "I moved an optional service in docker-compose.yml under a profile and stopped enabling that profile. After `docker compose down && docker compose up -d --remove-orphans` the old container is still running. Why, and how do I get rid of it?",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "(?i)down[^\\n]*(disabled|not enabled|inactive|enabled) profile|profile[^\\n]*(ignored|not (stopped|removed)|invisible)",
+        "description": "Explains that down acts only on enabled profiles"
+      },
+      {
+        "type": "content_regex",
+        "value": "--profile ['\"]?\\*['\"]?|COMPOSE_PROFILES=",
+        "description": "Fixes it by naming the profile(s) on down"
+      },
+      {
+        "type": "content_regex",
+        "value": "(?i)remove-orphans",
+        "description": "Addresses why --remove-orphans does not catch it"
+      }
+    ]
+  },
+  {
     "name": "version-pinning",
     "prompt": "Review this Dockerfile for version pinning issues:\n\nFROM node:latest\nRUN apt-get update && apt-get install -y curl\nRUN npm install -g typescript\nCOPY . .\nCMD [\"node\", \"app.js\"]",
     "assertions": [
