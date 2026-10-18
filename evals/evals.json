@@ -283,6 +283,27 @@
     ]
   },
   {
+    "name": "compose-profile-retire",
+    "prompt": "I moved an optional service in docker-compose.yml under a profile and stopped enabling that profile. After `docker compose down && docker compose up -d --remove-orphans` the old container is still running. Why, and how do I get rid of it?",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "(?i)(enabled|active|activated|selected|disabled|inactive)[^\\n]{0,40}profile|profile[^\\n]{0,60}(\\b(enabled|active|activated|selected)\\b|not (enable|activate|select)|disabled|inactive|ignored|skipped|invisible)",
+        "description": "Explains that down acts only on enabled profiles"
+      },
+      {
+        "type": "content_regex",
+        "value": "--profile\\s+\\S+[^\\n]*\\bdown\\b|COMPOSE_PROFILES=\\S+[^\\n]*\\bdown\\b|\\brm\\s+(-\\w*s\\w*|--stop)",
+        "description": "Fixes it by naming the profile(s) on down, or by stopping and removing the service"
+      },
+      {
+        "type": "content_regex",
+        "value": "(?i)not (treated as |considered )?(an )?orphan|orphans?[^\\n]{0,80}(still defined|still in|in the (compose )?file|no longer)",
+        "description": "Explains why --remove-orphans does not catch it: the service is still defined"
+      }
+    ]
+  },
+  {
     "name": "version-pinning",
     "prompt": "Review this Dockerfile for version pinning issues:\n\nFROM node:latest\nRUN apt-get update && apt-get install -y curl\nRUN npm install -g typescript\nCOPY . .\nCMD [\"node\", \"app.js\"]",
     "assertions": [
