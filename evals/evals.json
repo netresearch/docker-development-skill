@@ -298,7 +298,7 @@
       },
       {
         "type": "content_regex",
-        "value": "(not|n't|never) +(be +)?(treat(ed)?( +it)? +as|consider(ed)?( +it)?|see +it +as|count(ed)? +as|seen +as)? *(an? +)?orphan|orphans?.{0,80}(still defined|still (in|exists|present)|in the (compose )?file|no longer (defined|in|exists|present|listed|declared|part)|(removed|deleted|dropped|gone) from (the |your )?(compose|docker-compose|yaml|yml|file|config))",
+        "value": "(not|n't|never) +(be +)?(treat(ed)?( +it)? +as|consider(ed)?( +it)?|see +it +as|count(ed)? +as|seen +as)? *(an? +)?orphan|orphans?.{0,80}(still defined|still (in|exists|present|declared|listed)|in the (compose )?file|no longer (defined|in|exists|present|listed|declared|part)|(removed|deleted|dropped|gone) from (the |your )?(compose|docker-compose|yaml|yml|file|config))|still (defined|declared|listed|in).{0,80}orphan",
         "description": "Explains why --remove-orphans does not catch it: the service is still defined"
       }
     ],
