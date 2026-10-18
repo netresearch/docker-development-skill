@@ -27,26 +27,41 @@ Measured with Docker Compose 5.5.1 and 5.6.0, two services, `side` in profile
 | `--profile '*' down`, then `up` without the profile | removed |
 | `down` and `up` with the profile again (rollback) | running again |
 
+The table holds when Compose loads the project from the compose file: no `-p`,
+or `-p` together with `-f`. `docker compose -p <name> down` without `-f` does
+not read the file. It removes every container with that project label,
+disabled profiles included.
+
 So a service you meant to retire keeps running forever: never updated, still
 holding its published ports, and invisible to anything that only inspects
 what the current compose config starts.
 
-Fix: name every profile on `down` — `docker compose --profile '*' down` — or
-at least the profile you are turning off, then `up` with only the profiles you
-want. A container that `down` removes (rather than leaves stopped) also keeps
+Fix, any of:
+
+- name every profile on `down` — `docker compose --profile '*' down` — or at
+  least the profile you are turning off, then `up` with only the profiles you
+  want;
+- remove only that service: `docker compose down side` or
+  `docker compose rm -s -f side`. Naming a service enables its profile, and the
+  rest of the stack keeps running.
+
+Removing the container, rather than only stopping it, also keeps
 "compose-managed and not running" monitors quiet.
 
 To check the behaviour on a host's own Compose version, use a throwaway project
 (`COMPOSE_PROJECT_NAME=proftest`, `entrypoint: ["sleep", "600"]` on an image
 already present) and `docker ps -a --filter label=com.docker.compose.project=proftest`.
+Set the project name through `COMPOSE_PROJECT_NAME`, not `-p` alone, because
+`-p` without `-f` removes the disabled-profile container and hides the trap.
 
 ## Logging drivers block by default
 
 Docker's default log delivery mode is **blocking**: a container's write to
 stdout/stderr waits until the logging driver accepts it. With a remote driver
 (`awslogs`, `gcplogs`, `splunk`, `fluentd`) a stalled endpoint — a dead NAT, a
-regional outage — therefore stalls the application's next log line, and with
-it the request being served.
+regional outage — therefore stalls the application's writes once the driver's
+own queue is full, and with them the request being served. For `awslogs` that
+queue holds 4096 events (`awslogs-max-buffered-events`).
 
 `mode: non-blocking` puts a ring buffer in front of the driver; lines past
 `max-buffer-size` (default `1m`) are **dropped** instead:
@@ -56,6 +71,7 @@ it the request being served.
       driver: awslogs
       options:
         awslogs-group: my-service
+        awslogs-region: eu-central-1
         mode: non-blocking
         max-buffer-size: "4m"
 ```
@@ -73,12 +89,15 @@ What it does and does not protect:
   wrong region or group) no longer fails the deploy — verify after a deploy that
   the new container's lines actually arrive.
 - Size the buffer from the measured log rate, not a guess: a service writing
-  6 KB/min fills 4 MB in hours, one logging every request in minutes.
+  6 KB/min fills 4 MB in hours, one logging every request in minutes. The
+  capacity before lines are dropped is the driver's queue plus
+  `max-buffer-size`.
 
 `docker create --log-driver awslogs --log-opt mode=non-blocking --log-opt max-buffer-size=4m ...`
 checks the option syntax against the engine without starting anything: a bad
 size fails with `error parsing option max-buffer-size` (`invalid size: 'abc'`,
-`invalid suffix: 'x'`). It does not contact the endpoint, so it succeeds with a
+`invalid suffix: 'x'`), and so do a missing `awslogs-group` and a mode typo
+such as `nonblocking`. It does not contact the endpoint, so it succeeds with a
 nonexistent group and without credentials — it is no substitute for checking
 that log lines arrive after the deploy.
 

@@ -67,5 +67,6 @@
 - [Bind-Mount Ownership](skills/docker-development/references/bind-mount-ownership.md) — root-owned bind-mount artifacts; a tmpfs on a parent path hiding a volume below it
 - [Engine & Image Upgrades](skills/docker-development/references/engine-and-image-upgrades.md) — `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check; base image changing its `USER`; PHP 8.5 OPcache built into the core
 - [Database Container Readiness](skills/docker-development/references/database-container-readiness.md) — seeded DB images log `ready for connections` twice
+- [Compose Runtime Lifecycle](skills/docker-development/references/compose-runtime-lifecycle.md) — a disabled profile's container survives `down`; blocking vs non-blocking log delivery
 - [WSL Diagnosis & Fix](skills/docker-via-wsl/references/diagnosis-and-fix.md) — wrong-bind-mount diagnosis from a Windows shell
 - [Security Assurance](docs/SECURITY-ASSURANCE.md) — security assurance case: threats, trust boundaries, limits
