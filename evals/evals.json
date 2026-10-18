@@ -283,6 +283,35 @@
     ]
   },
   {
+    "name": "compose-profile-retire",
+    "prompt": "I moved an optional service in docker-compose.yml under a profile and stopped enabling that profile. After `docker compose down && docker compose up -d --remove-orphans` the old container is still running. Why, and how do I get rid of it?",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "(enabled|active|activated|selected|disabled|inactive|requested|specified).{0,40}profile|profile.{0,60}(\\b(enabled|active|activated|selected|requested|specified|passed|given|named)\\b|you pass|not (enable|activate|select|load)|disabled|inactive|ignored|skipped|invisible|excluded)|without +`?--profile.{0,60}(not|n.t) +(load|see|include)",
+        "description": "Explains that down acts only on enabled profiles"
+      },
+      {
+        "type": "content_regex",
+        "value": "(--profile[ =][^ ]+[[:space:]]+)+down\\b|COMPOSE_PROFILES=[^ ]+ +docker[ -]compose +(-[^ ]+ +[^ ]+ +)*down\\b|docker[ -]compose +(-f +[^ ]+ +)*down +[a-z0-9_][a-z0-9_-]*(`|$| *&&| *;)|docker[ -]compose +-p +[^ ]+ +down\\b|\\brm +(-[^ ]+ +)*(-[a-z]*s[a-z]*|--stop)\\b|\\bstop +[a-z0-9_-]+ *(&&|;).*\\brm\\b|\\bdocker +(container +)?rm +(-[a-z]*f[a-z]*|--force)\\b|\\bdocker +(container +)?stop +[^ ]+.{0,80}\\bdocker +(container +)?rm\\b",
+        "description": "Fixes it by naming the profile(s) or the service on down, or by stopping and removing the container"
+      },
+      {
+        "type": "content_regex",
+        "value": "(not|n't|never) +(be +)?(treat(ed)?( +it)? +as|consider(ed)?( +it)?|see +it +as|count(ed)? +as|seen +as)? *(an? +)?orphan|orphans?.{0,80}(still defined|still (in|exists|present|declared|listed)|in the (compose )?file|no longer (defined|in|exists|present|listed|declared|part)|(removed|deleted|dropped|gone) from (the |your )?(compose|docker-compose|yaml|yml|file|config))|still (defined|declared|listed|in).{0,80}orphan",
+        "description": "Explains why --remove-orphans does not catch it: the service is still defined"
+      }
+    ],
+    "samples": {
+      "passing": "`docker compose down` only acts on the profiles enabled for that command, so a service in a disabled profile is skipped. `--remove-orphans` does not catch it either: it is not an orphan, because the service is still in the compose file. Name the profile on down: `docker compose --profile '*' down`, then `docker compose up -d` without the profile.",
+      "failing": [
+        "Add `--profile debug` to your `up` command so it starts with the rest. --remove-orphans removes containers.",
+        "After `docker compose down && docker compose up -d --remove-orphans` you need to prune: `docker container prune`.",
+        "Use COMPOSE_PROFILES=debug docker compose up. remove-orphans."
+      ]
+    }
+  },
+  {
     "name": "version-pinning",
     "prompt": "Review this Dockerfile for version pinning issues:\n\nFROM node:latest\nRUN apt-get update && apt-get install -y curl\nRUN npm install -g typescript\nCOPY . .\nCMD [\"node\", \"app.js\"]",
     "assertions": [
