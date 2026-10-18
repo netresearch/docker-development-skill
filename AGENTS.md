@@ -47,6 +47,7 @@
 - `bash Build/Scripts/check-plugin-version.sh` — validate plugin version consistency
 - `bash tests/check-plugin-version.sh` — run the behavioural tests (offline; see README "Tests")
 - `bash tests/check-allowed-tools.sh` — check that every `allowed-tools` entry in `skills/*/SKILL.md` is read-only
+- `EVALS_BASE_FILE=<main's evals.json> bash <skill-repo>/scripts/validate-evals.sh evals/evals.json` — validate `evals/evals.json` as CI's Eval Validation does. Assertions are graded as case-insensitive POSIX ERE with `grep -qiE`, line by line, not Python `re`; a new or changed eval needs `samples` (one passing, at least one failing). The rules are in the `skill-repo` skill, `references/materialization-contract.md`
 
 ## Rules
 
