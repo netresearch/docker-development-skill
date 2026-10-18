@@ -288,17 +288,17 @@
     "assertions": [
       {
         "type": "content_regex",
-        "value": "(?i)(enabled|active|activated|selected|disabled|inactive)[^\\n]{0,40}profile|profile[^\\n]{0,60}(\\b(enabled|active|activated|selected)\\b|not (enable|activate|select)|disabled|inactive|ignored|skipped|invisible)",
+        "value": "(enabled|active|activated|selected|disabled|inactive).{0,40}profile|profile.{0,60}(\\b(enabled|active|activated|selected)\\b|not (enable|activate|select)|disabled|inactive|ignored|skipped|invisible)",
         "description": "Explains that down acts only on enabled profiles"
       },
       {
         "type": "content_regex",
-        "value": "--profile\\s+\\S+[^\\n]*\\bdown\\b|COMPOSE_PROFILES=\\S+[^\\n]*\\bdown\\b|\\brm\\s+(-\\w*s\\w*|--stop)",
-        "description": "Fixes it by naming the profile(s) on down, or by stopping and removing the service"
+        "value": "(--profile[ =][^ ]+[[:space:]]+)+down\\b|COMPOSE_PROFILES=[^ ]+ +docker[ -]compose +(-[^ ]+ +[^ ]+ +)*down\\b|docker[ -]compose +(-f +[^ ]+ +)*down +[a-z0-9_][a-z0-9_-]*(`|$| *&&| *;)|docker[ -]compose +-p +[^ ]+ +down\\b|\\brm +(-[^ ]+ +)*(-[a-z]*s[a-z]*|--stop)\\b|\\bstop +[a-z0-9_-]+ *(&&|;).*\\brm\\b|\\bdocker +rm +-f\\b",
+        "description": "Fixes it by naming the profile(s) or the service on down, or by stopping and removing the container"
       },
       {
         "type": "content_regex",
-        "value": "(?i)not (treated as |considered )?(an )?orphan|orphans?[^\\n]{0,80}(still defined|still in|in the (compose )?file|no longer)",
+        "value": "(not|n't|never) +(be +)?(treat(ed)?( +it)? +as|consider(ed)?( +it)?|see +it +as|count(ed)? +as|seen +as)? *(an? +)?orphan|orphans?.{0,80}(still defined|still in|in the (compose )?file|no longer)",
         "description": "Explains why --remove-orphans does not catch it: the service is still defined"
       }
     ],
