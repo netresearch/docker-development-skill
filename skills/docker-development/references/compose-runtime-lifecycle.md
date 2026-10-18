@@ -67,6 +67,9 @@ queue holds 4096 events (`awslogs-max-buffered-events`).
 `max-buffer-size` (default `1m`) are **dropped** instead:
 
 ```yaml
+services:
+  app:
+    image: registry.example.com/app:1.4.2
     logging:
       driver: awslogs
       options:
@@ -94,10 +97,17 @@ What it does and does not protect:
   `max-buffer-size`.
 
 `docker create --log-driver awslogs --log-opt mode=non-blocking --log-opt max-buffer-size=4m ...`
-checks the option syntax against the engine without starting anything: a bad
-size fails with `error parsing option max-buffer-size` (`invalid size: 'abc'`,
-`invalid suffix: 'x'`), and so do a missing `awslogs-group` and a mode typo
-such as `nonblocking`. It does not contact the endpoint, so it succeeds with a
+checks the option syntax against the engine without starting anything. It
+rejects, each with its own message:
+
+- a bad size: `error parsing option max-buffer-size: invalid size: 'abc'`
+  (or `invalid suffix: 'x'`);
+- a missing group: `must specify a value for log opt 'awslogs-group'`;
+- a mode typo: `logger: logging mode not supported: nonblocking`;
+- `max-buffer-size` without the mode:
+  `logger: max-buffer-size option is only supported with 'mode=non-blocking'`.
+
+It does not contact the endpoint, so it succeeds with a
 nonexistent group and without credentials — it is no substitute for checking
 that log lines arrive after the deploy.
 

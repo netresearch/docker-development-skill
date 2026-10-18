@@ -14,7 +14,8 @@
 │       ├── ci-testing.md               # CI testing patterns for containers
 │       ├── dind-testing-patterns.md    # Docker-in-Docker testing patterns
 │       ├── bind-mount-ownership.md     # root-owned bind-mount artifacts
-│       └── database-container-readiness.md  # seeded DB images: init races
+│       ├── database-container-readiness.md  # seeded DB images: init races
+│       └── compose-runtime-lifecycle.md     # disabled profiles vs down; log delivery mode
 ├── skills/docker-via-wsl/              # Windows: run docker through WSL2
 │   ├── SKILL.md                        # Skill definition
 │   └── references/
