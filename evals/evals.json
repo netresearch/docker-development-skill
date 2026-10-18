@@ -301,7 +301,15 @@
         "value": "(?i)not (treated as |considered )?(an )?orphan|orphans?[^\\n]{0,80}(still defined|still in|in the (compose )?file|no longer)",
         "description": "Explains why --remove-orphans does not catch it: the service is still defined"
       }
-    ]
+    ],
+    "samples": {
+      "passing": "`docker compose down` only acts on the profiles enabled for that command, so a service in a disabled profile is skipped. `--remove-orphans` does not catch it either: it is not an orphan, because the service is still in the compose file. Name the profile on down: `docker compose --profile '*' down`, then `docker compose up -d` without the profile.",
+      "failing": [
+        "Add `--profile debug` to your `up` command so it starts with the rest. --remove-orphans removes containers.",
+        "After `docker compose down && docker compose up -d --remove-orphans` you need to prune: `docker container prune`.",
+        "Use COMPOSE_PROFILES=debug docker compose up. remove-orphans."
+      ]
+    }
   },
   {
     "name": "version-pinning",
