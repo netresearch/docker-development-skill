@@ -9,10 +9,11 @@ exposed?" has two layers, and each needs its own measurement:
 1. **The application's own TLS stack.** A Go binary verifies chains in
    `crypto/x509`; a fix there (a new toolchain that rejects specific
    intermediates) protects only that binary.
-2. **The system bundle**, `/etc/ssl/certs/ca-certificates.crt`. Everything else
-   in the image reads it: `curl`, `wget`, OpenSSL, a shell job that a scheduler
-   runs inside the container. A root removed upstream protects these programs
-   only once the image carries a `ca-certificates` package that dropped it.
+2. **The system bundle**, `/etc/ssl/certs/ca-certificates.crt`. `curl`,
+   `wget`, OpenSSL and a shell job that a scheduler runs inside the container
+   read it, and so does Go's `crypto/x509` on Linux when it builds a chain. A
+   root removed upstream protects these programs only once the image carries a
+   `ca-certificates` package that dropped it.
 
 Do not state that the second layer is or is not covered before measuring the
 published image. Reasoning from "non-Go programs use the system bundle" alone
