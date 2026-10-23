@@ -21,22 +21,35 @@ gives the wrong answer as soon as the distribution has shipped a new package.
 
 ## Measure the published image, not the Dockerfile
 
+A local tag can point to an older image than the registry serves, because
+`docker run` does not refresh it. Pull first and measure the digest:
+
 ```bash
-img=ghcr.io/<org>/<app>:<tag>
-docker run --rm --entrypoint sh "$img" -c \
-  'cat /etc/ssl/certs/ca-certificates.crt; echo ===; cat /lib/apk/db/installed' > ca.txt
+docker pull ghcr.io/ORG/APP:TAG
+img=$(docker image inspect --format '{{index .RepoDigests 0}}' ghcr.io/ORG/APP:TAG)
+```
+
+Copy the files out without running anything in the image. This also works for
+distroless images, which have no shell:
+
+```bash
+c=$(docker create "$img")
+docker cp "$c:/etc/ssl/certs/ca-certificates.crt" bundle.crt
+docker cp "$c:/lib/apk/db/installed" apk-installed || true   # Alpine only
+docker rm "$c"
 ```
 
 `/lib/apk/db/installed` is Alpine's package database; the `P:ca-certificates`
-record is followed by its `V:` version line. On Debian or Ubuntu, run
-`dpkg -s ca-certificates` in the container instead.
+record is followed by its `V:` version line. On Debian or Ubuntu, read
+`/var/lib/dpkg/status` the same way. An image without a package database has
+no version to read: the root list below is then the whole measurement.
 
-Then list the subject of every root, one PEM at a time:
+List the subject and the SHA-256 fingerprint of every root, one PEM at a time:
 
 ```python
 import re, subprocess
 
-bundle = open("ca.txt").read().split("===", 1)[0]
+bundle = open("bundle.crt").read()
 pems = re.findall(
     r"-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----", bundle, re.S
 )
@@ -44,7 +57,7 @@ print(len(pems), "roots")
 for p in pems:
     print(
         subprocess.run(
-            ["openssl", "x509", "-noout", "-subject"],
+            ["openssl", "x509", "-noout", "-subject", "-fingerprint", "-sha256"],
             input=p,
             capture_output=True,
             text=True,
@@ -52,9 +65,11 @@ for p in pems:
     )
 ```
 
-Look for the affected root by its subject. Check every root the compromised
-intermediates chain to, cross-signs included: an intermediate cross-signed by a
-second root still validates through that root.
+Compare fingerprints, not subjects: a reissued root can carry the same subject
+as the removed one. Take the affected fingerprints from the advisory or the
+CCADB record. Check every root the compromised intermediates chain to,
+cross-signs included: an intermediate cross-signed by a second root still
+validates through that root.
 
 ## `grep` for the CA's name proves nothing
 
@@ -70,7 +85,11 @@ bundle.
 `apk add --no-cache ca-certificates` without a version installs whatever the
 repository held on the day of the build. So:
 
-- An image rebuilt after the distribution shipped the new package is covered.
+- An image is covered only if the install layer actually ran after the
+  distribution shipped the new package. `--no-cache` on `apk add` does not
+  invalidate Docker's cached `RUN` layer, so a rebuild can reuse the old
+  bundle. Rebuild with `docker build --pull --no-cache`, or bust the cache in
+  CI, then measure the published image again.
 - Every image built before that day keeps the old bundle, whatever the base
   image tag says. Rebuild, or tell users of older tags which version first
   carries the new bundle.
