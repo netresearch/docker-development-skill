@@ -99,10 +99,10 @@ RUN --mount=type=secret,id=ssh_key,dst=/root/.ssh/id_rsa git clone git@github.co
 ```hcl
 target "app" {
   platforms = ["linux/amd64", "linux/arm64"]
-  cache-from = ["type=gha"]
-  cache-to = ["type=gha,mode=max"]
 }
 ```
+
+CI builds go through Bake and `netresearch/.github/.github/workflows/build-container-bake.yml@main`, one image or several. The reusable adds a GHA cache per target, so the HCL declares none; a scheduled rebuild passes `cache: false` -- `references/bake-ci-cache.md`
 
 ## Security Anti-Patterns
 
@@ -138,6 +138,7 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 
 ## References
 
+- `references/bake-ci-cache.md` -- the shared bake reusable; `-f docker-bake.hcl` beside a compose file; GHA cache scope per target; uncached scheduled rebuild that still writes the cache; helper steps in bake-action's directory
 - `references/ci-testing.md` -- CI testing patterns for Docker images; busybox `sh` vs bash in `-c` strings; `timeout` around `docker compose run` leaves the container running when PID 1 ignores the signal
 - `references/dind-testing-patterns.md` -- Docker-in-Docker testing patterns
 - `references/bind-mount-ownership.md` -- root-owned bind-mount artifacts; a tmpfs on a parent path hiding a volume below it
