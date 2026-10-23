@@ -148,3 +148,4 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 - `references/engine-and-image-upgrades.md` -- `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check; a base image changing its `USER`; PHP 8.5 OPcache built into the core
 - `references/database-container-readiness.md` -- seeded DB images log `ready for connections` twice; verify the seed, not the log
 - `references/compose-runtime-lifecycle.md` -- a disabled profile's container survives `down` and `up --remove-orphans`; blocking vs non-blocking log delivery and what non-blocking does not protect
+- `references/image-ca-trust.md` -- after a CA compromise: measure the published image's `ca-certificates` version and root subjects; `grep` for a CA name in the bundle always returns 0

@@ -15,7 +15,8 @@
 │       ├── dind-testing-patterns.md    # Docker-in-Docker testing patterns
 │       ├── bind-mount-ownership.md     # root-owned bind-mount artifacts
 │       ├── database-container-readiness.md  # seeded DB images: init races
-│       └── compose-runtime-lifecycle.md     # disabled profiles vs down; log delivery mode
+│       ├── compose-runtime-lifecycle.md     # disabled profiles vs down; log delivery mode
+│       └── image-ca-trust.md           # roots a published image trusts after a CA compromise
 ├── skills/docker-via-wsl/              # Windows: run docker through WSL2
 │   ├── SKILL.md                        # Skill definition
 │   └── references/
@@ -70,5 +71,6 @@
 - [Engine & Image Upgrades](skills/docker-development/references/engine-and-image-upgrades.md) — `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check; base image changing its `USER`; PHP 8.5 OPcache built into the core
 - [Database Container Readiness](skills/docker-development/references/database-container-readiness.md) — seeded DB images log `ready for connections` twice
 - [Compose Runtime Lifecycle](skills/docker-development/references/compose-runtime-lifecycle.md) — a disabled profile's container survives `down`; blocking vs non-blocking log delivery
+- [Image CA Trust](skills/docker-development/references/image-ca-trust.md) — after a CA compromise: which roots a published image trusts, and why `grep` for the CA name proves nothing
 - [WSL Diagnosis & Fix](skills/docker-via-wsl/references/diagnosis-and-fix.md) — wrong-bind-mount diagnosis from a Windows shell
 - [Security Assurance](docs/SECURITY-ASSURANCE.md) — security assurance case: threats, trust boundaries, limits
