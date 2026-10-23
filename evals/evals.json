@@ -580,5 +580,38 @@
         "That is a Docker Desktop bug. Restart the daemon and rebuild the image with --no-cache."
       ]
     }
+  },
+  {
+    "name": "bake-reusable-weekly-rebuild-cache",
+    "prompt": "Our repo builds two images (app and nginx) with docker/build-push-action and the GHA cache. We want a weekly rebuild that picks up OS security patches. How should the CI build be set up?",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "build-container-bake\\.yml",
+        "description": "Uses the shared bake reusable instead of hand-written build-push steps"
+      },
+      {
+        "type": "content_regex",
+        "value": "(?i)scope",
+        "description": "Gives each target its own GHA cache scope, so the two images do not overwrite each other"
+      },
+      {
+        "type": "content_regex",
+        "value": "(?i)cache: \\$\\{\\{ *github\\.event_name *!= *'schedule'|(no|without|skip|off).{0,40}cache.{0,60}schedul|schedul.{0,60}(no|without|skip|off).{0,40}cache",
+        "description": "Turns the layer cache off for the scheduled run"
+      },
+      {
+        "type": "content_regex",
+        "value": "(?i)cache-to",
+        "description": "Keeps writing the cache on the uncached run, so the next push does not restore the old layers"
+      }
+    ],
+    "samples": {
+      "passing": "Define both images as targets in docker-bake.hcl and call netresearch/.github/.github/workflows/build-container-bake.yml@main with bake-file: docker-bake.hcl and targets: app,nginx. Declare no cache in the HCL: the reusable gives each target its own GHA scope, so app and nginx do not overwrite each other. Add schedule: cron '0 6 * * 1' and cache: ${{ github.event_name != 'schedule' }}; on the weekly run the reusable reads no cache but keeps cache-to, so the next push starts from the patched layers.",
+      "failing": [
+        "Add a schedule trigger to the existing workflow and keep cache-from: type=gha and cache-to: type=gha,mode=max; the weekly run will pick up the new packages.",
+        "Call build-container-bake.yml with cache: false on every run so nothing is ever cached."
+      ]
+    }
   }
 ]
