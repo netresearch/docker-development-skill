@@ -134,6 +134,7 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 - `networks.internal: true` isolates databases
 - `profiles: [debug]`: start only with `--profile debug`. `down` and `--remove-orphans` ignore a disabled profile's containers, so a service you stop enabling keeps running -- `docker compose --profile '*' down`, or `docker compose down <service>` (`references/compose-runtime-lifecycle.md`)
 - logging drivers block by default: a stalled remote endpoint (`awslogs`, ...) stalls the app's writes; `mode: non-blocking` + `max-buffer-size` drops lines instead, protecting a running container only (`references/compose-runtime-lifecycle.md`)
+- `COMPOSE_FILE` (shell or `.env`) loads exactly that list, so `compose.override.yml` is silently not merged -- list it in the pin; and `docker compose config` prints a literal `$` as `$$`, so measure values with `printenv` inside a container (`references/compose-config-and-env.md`)
 - shared image ref: define ONCE per file as top-level extension field + anchor -- `x-app-image: &app-image registry/app:${APP_IMAGE_VERSION:-85}`, services use `image: *app-image`. The field must sit ABOVE `services:` — an alias is only valid after its anchor in document order. `:-` defaults cover unset AND empty vars (a bare omitted tag silently resolves `:latest`). Anchors are file-local: every overlay file needs its own. Verify both paths: `APP_IMAGE_VERSION= docker compose config` and with an override
 
 ## References
@@ -149,4 +150,5 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 - `references/engine-and-image-upgrades.md` -- `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check; a base image changing its `USER`; PHP 8.5 OPcache built into the core
 - `references/database-container-readiness.md` -- seeded DB images log `ready for connections` twice; verify the seed, not the log
 - `references/compose-runtime-lifecycle.md` -- a disabled profile's container survives `down` and `up --remove-orphans`; blocking vs non-blocking log delivery and what non-blocking does not protect
+- `references/compose-config-and-env.md` -- a `COMPOSE_FILE` pin disables the `compose.override.yml` merge; `docker compose config` re-escapes `$` as `$$`, so it is not what the container receives
 - `references/image-ca-trust.md` -- after a CA compromise: measure the published image's `ca-certificates` version and root subjects; `grep` for a CA name in the bundle always returns 0
