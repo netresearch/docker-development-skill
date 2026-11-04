@@ -28,6 +28,9 @@ variable:
 | `COMPOSE_FILE=compose.yml` | **no** |
 | `COMPOSE_FILE=compose.yml:compose.override.yml` | yes |
 
+The list separator is `:` on Linux and macOS and `;` on Windows;
+`COMPOSE_PATH_SEPARATOR` overrides it.
+
 When an override "is not taking effect", check the pin first, then list the
 override explicitly:
 
@@ -54,7 +57,8 @@ passed through `environment: MY_VAR: ${MY_VAR:-}`:
 | `MY_VAR=sk-a$$b-c$$d` | `sk-a$$b-c$$d` | `sk-a$b-c$d` |
 
 So Compose does interpolate `.env` values, and `$$` is the escape for a
-literal `$` there, as it is in `compose.yml`. A guard built on the
+literal `$` there, as it is in `compose.yml`. A single-quoted value
+(`MY_VAR='sk-a$b'`) is taken literally and needs no escape. A guard built on the
 `compose config` reading — "`.env` cannot carry a `$`" — would reject valid
 secrets.
 
@@ -70,4 +74,7 @@ services:
 ```
 
 `docker compose run --rm probe` prints the value; `cat -A` makes trailing
-whitespace and line ends visible (`$` marks the end of the line).
+whitespace and line ends visible (`$` marks the end of the line). The value
+lands in the terminal and in any CI log or session transcript; for a real
+credential, compare `printenv MY_VAR | sha256sum` against the hash of the
+expected value instead.
