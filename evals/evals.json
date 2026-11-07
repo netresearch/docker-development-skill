@@ -613,5 +613,64 @@
         "Call build-container-bake.yml with cache: false on every run so nothing is ever cached."
       ]
     }
+  },
+  {
+    "name": "mariadb-11-major-upgrade-healthcheck",
+    "prompt": "Our compose stack runs mariadb:10.6 with a persistent ./data directory and the healthcheck `mysqladmin ping -h localhost -u$$MYSQL_USER -p$$MYSQL_PASSWORD`. The app service waits with depends_on condition: service_healthy. We want to move to mariadb:11.8. What do we have to change in the compose file?",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "healthcheck\\.sh",
+        "description": "Replaces the mysqladmin probe with the image's healthcheck.sh"
+      },
+      {
+        "type": "content_regex",
+        "value": "mysqladmin.{0,120}(not|no longer|missing|removed|gone|absent)|(no longer|not|missing|removed|gone).{0,80}mysqladmin",
+        "description": "Says that mysqladmin is no longer in the 11.x image"
+      },
+      {
+        "type": "content_regex",
+        "value": "MARIADB_AUTO_UPGRADE",
+        "description": "Sets MARIADB_AUTO_UPGRADE so the existing data directory is upgraded and gets the healthcheck user"
+      },
+      {
+        "type": "content_regex",
+        "value": "stop_grace_period|clean(ly)? shut ?down|Shutdown complete",
+        "description": "Protects the clean shutdown of the old server before the upgrade"
+      }
+    ],
+    "samples": {
+      "passing": "The 11.x image no longer ships mysqladmin, so the probe fails and app never starts. Use test: [\"CMD\", \"healthcheck.sh\", \"--connect\", \"--innodb_initialized\"], set MARIADB_AUTO_UPGRADE: \"1\" so the existing directory is upgraded and gets the healthcheck user, and add stop_grace_period: 120s so the old server shuts down cleanly first.",
+      "failing": [
+        "Change the image to mariadb:11.8 and keep the mysqladmin ping healthcheck; nothing else is needed."
+      ]
+    }
+  },
+  {
+    "name": "nginx-php-fpm-too-big-header-spreads-502",
+    "prompt": "Behind nginx with `upstream php-handler { server app:9000; }` (compose service app, php-fpm with catch_workers_output = yes), one user revoked a session and from then on every user got 502 for a while. The nginx error log shows `upstream sent too big header while reading response header from upstream`, then `upstream server temporarily disabled`, then `no live upstreams while connecting to upstream`. What happened and how do we fix it?",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "fastcgi_buffer_size",
+        "description": "Raises fastcgi_buffer_size, the buffer the PHP stderr output and the headers overflowed"
+      },
+      {
+        "type": "content_regex",
+        "value": "stderr",
+        "description": "Explains that the PHP error log on stderr shares the FastCGI header buffer"
+      },
+      {
+        "type": "content_regex",
+        "value": "max_fails *= *0",
+        "description": "Sets max_fails=0 so one failed request does not disable the only backend"
+      }
+    ],
+    "samples": {
+      "passing": "PHP logged a long stack trace to stderr, which FastCGI sends together with the response headers, and it overflowed fastcgi_buffer_size. nginx counted that as an upstream failure and disabled every address of app. Set fastcgi_buffer_size 32k and server app:9000 max_fails=0.",
+      "failing": [
+        "Increase pm.max_children in php-fpm and add keepalive 32 to the upstream."
+      ]
+    }
   }
 ]

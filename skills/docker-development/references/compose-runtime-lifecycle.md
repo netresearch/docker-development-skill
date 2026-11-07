@@ -113,3 +113,51 @@ that log lines arrive after the deploy.
 
 `mode` and `max-buffer-size` can also be set host-wide under `log-opts` in
 `daemon.json`; check it before assuming a container runs in blocking mode.
+
+## Swapping the image keeps the anonymous volume
+
+An image that declares `VOLUME` (`/data` in the Redis and Valkey images,
+`/var/lib/mysql` in MariaDB) gets an anonymous volume when the compose file
+mounts nothing there. Recreating the container keeps that volume: Compose
+reattaches the previous container's anonymous volumes to its replacement,
+including when only the `image:` changed.
+
+So replacing Redis with Valkey under the same service name hands Valkey the
+old `/data/dump.rdb`. Redis 8 writes RDB versions Valkey does not load by
+default (per Valkey's migration docs, not observed here); the container then
+fails to start, and everything that waits for it with
+`depends_on: condition: service_healthy` stays down. The same applies to any
+engine swap that changes the on-disk format.
+
+Give the new engine a fresh volume, any of:
+
+- rename the service (`redis` → `valkey`): a new service gets new anonymous
+  volumes, and the old container is removed with `--remove-orphans` or
+  `docker rm -fv`;
+- `docker compose up -d -V` (`--renew-anon-volumes`) for that deploy;
+- mount a named volume or bind mount and empty it deliberately.
+
+A cache loses nothing by this; PHP sessions stored in it do — every user logs
+in again.
+
+## Healthcheck probes inside minimal images
+
+A healthcheck runs inside the container, with that image's tools. Two traps
+after moving a service to Alpine:
+
+- **No `curl`.** Alpine images carry busybox `wget`, not `curl`. A probe
+  `["CMD", "curl", ...]` fails with `executable file not found`, the container
+  stays `unhealthy`, and a reverse proxy that skips unhealthy containers (the
+  Traefik Docker provider does) removes its route.
+- **`localhost` is IPv6 first.** busybox `wget http://localhost/` tries `::1`
+  first and reports `Connection refused` when the server listens on IPv4 only
+  (`listen 80;` in nginx). Probe `127.0.0.1` explicitly.
+
+```yaml
+healthcheck:
+  # status.php is answered by PHP, so the probe covers nginx and php-fpm.
+  test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/status.php"]
+```
+
+Read the probe's own output before changing the service:
+`docker inspect -f '{{range .State.Health.Log}}{{.ExitCode}} {{.Output}}{{end}}' <container>`.
