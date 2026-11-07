@@ -60,3 +60,72 @@ setup to `127.0.0.1` is not worth holding a worker for.
 Raising `pm.max_children` instead trades memory for the same failure one load
 step further out — and where the container has a memory cap, the headroom for
 `keepalive`-many concurrently pinned children is not there to give.
+
+## A long PHP error turns into 502 for every client
+
+A second nginx/php-fpm failure that a single bad request spreads to everyone.
+
+### The signature
+
+In the nginx error log, in this order:
+
+```text
+FastCGI sent in stderr: "PHP message: ..."
+upstream sent too big header while reading response header from upstream
+upstream server temporarily disabled while reading response header from upstream
+no live upstreams while connecting to upstream
+```
+
+The first client gets a 502. Afterwards **every** client gets 502 for about
+10 s, healthchecks included, and each new request from the first client starts
+the cycle again.
+
+### Why
+
+With `catch_workers_output = yes` (the usual container setting) PHP writes its
+error log to stderr, and FastCGI delivers that stderr in the same records as
+the response headers. A stack trace of a few KB plus the headers overflows
+`fastcgi_buffer_size`, whose default is one memory page (4k or 8k). nginx then
+counts the request as a failure of the upstream server.
+
+The default `max_fails=1 fail_timeout=10s` disables that server. A compose
+service name resolves to every address of the container — with IPv6 enabled on
+the network that is one IPv4 and one IPv6 address — and both get disabled in
+turn. With no address left, nginx answers `no live upstreams` without trying
+php-fpm at all.
+
+Seen with Nextcloud: revoking a session whose browser still holds remember-me
+cookies makes Nextcloud log `Could not find the session token to renew` with
+its trace, about 3.8 KB.
+
+### Fix
+
+```nginx
+upstream php-handler {
+    # One backend container: never take it out of rotation for a bad request.
+    server app:9000 max_fails=0;
+}
+server {
+    fastcgi_buffer_size 32k;   # stderr and headers share this buffer
+}
+```
+
+`fastcgi_buffer_size` removes the trigger; `max_fails=0` removes the spread.
+With a single backend there is nothing to fail over to, so disabling it only
+turns one failed request into an outage.
+
+### Reproduce
+
+Make the logged message long — the request URL and the user agent are part of
+the log entry — and trigger an error that PHP logs. Then send unrelated
+requests from a second client:
+
+```bash
+ua="Mozilla/5.0 $(printf 'p%.0s' $(seq 1 1000))"
+curl -sk -A "$ua" -o /dev/null -w '%{http_code}\n' https://app.example/failing-path
+for i in $(seq 1 10); do curl -sk -o /dev/null -w '%{http_code} ' https://app.example/status.php; done
+```
+
+Before the fix the first call returns 502 and the error log shows
+`too big header`. The spread to other clients needs the service to resolve to
+more than one address; a single-address dev stack shows only the first 502.
