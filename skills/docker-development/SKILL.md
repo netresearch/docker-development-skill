@@ -131,7 +131,7 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 ## Compose Essentials
 
 - startup ordering: `depends_on.condition: service_healthy` + `healthcheck` `start_period`. The probe runs with the image's own tools: Alpine has busybox `wget`, no `curl`, and `localhost` resolves to `::1` first -- probe the address the server listens on, `127.0.0.1` for IPv4 (`references/compose-runtime-lifecycle.md`); `mariadb:11+` has no `mysqladmin` -- use `healthcheck.sh` (`references/database-container-readiness.md`)
-- swapping a service's image keeps its anonymous `VOLUME` data (Redis → Valkey reuses `/data`) -- for disposable data rename the service or run `up -V --no-deps <service>`; a bare `-V` also renews a database's anonymous volume (`references/compose-runtime-lifecycle.md`)
+- swapping a service's image keeps its anonymous `VOLUME` data (Redis → Valkey reuses `/data`) -- for disposable data rename the service (and update `depends_on` and clients) or run `up -V --no-deps <service>`; a bare `-V` also renews a database's anonymous volume (`references/compose-runtime-lifecycle.md`)
 - `networks.internal: true` isolates databases
 - `profiles: [debug]`: start only with `--profile debug`. `down` and `--remove-orphans` ignore a disabled profile's containers, so a service you stop enabling keeps running -- `docker compose --profile '*' down`, or `docker compose down <service>` (`references/compose-runtime-lifecycle.md`)
 - logging drivers block by default: a stalled remote endpoint (`awslogs`, ...) stalls the app's writes; `mode: non-blocking` + `max-buffer-size` drops lines instead, protecting a running container only (`references/compose-runtime-lifecycle.md`)

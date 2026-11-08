@@ -635,7 +635,7 @@
       },
       {
         "type": "content_regex",
-        "value": "docker (compose )?stop .{0,20}(-t|--time)|Shutdown complete",
+        "value": "docker (compose )?stop .{0,20}(-t|--time)",
         "description": "Stops the running 10.6 container explicitly with enough time and checks the clean shutdown; stop_grace_period in the new file does not apply to it"
       }
     ],
@@ -643,7 +643,8 @@
       "passing": "The 11.x image no longer ships mysqladmin, so the probe fails and app never starts. Use test: [\"CMD\", \"healthcheck.sh\", \"--connect\", \"--innodb_initialized\"] and set MARIADB_AUTO_UPGRADE: \"1\" so the existing directory is upgraded and gets the healthcheck user. Stop the old container with docker stop -t 120 and confirm Shutdown complete in its log before starting the new image.",
       "failing": [
         "Change the image to mariadb:11.8 and keep the mysqladmin ping healthcheck; nothing else is needed.",
-        "The 11.x image no longer ships mysqladmin. Use healthcheck.sh, set MARIADB_AUTO_UPGRADE and add stop_grace_period: 120s, then run docker compose up -d."
+        "The 11.x image no longer ships mysqladmin. Use healthcheck.sh, set MARIADB_AUTO_UPGRADE and add stop_grace_period: 120s, then run docker compose up -d.",
+        "The 11.x image no longer ships mysqladmin. Use healthcheck.sh, set MARIADB_AUTO_UPGRADE, run docker compose up -d and check for Shutdown complete in the log afterwards."
       ]
     }
   },
@@ -658,13 +659,13 @@
       },
       {
         "type": "content_regex",
-        "value": "fastcgi_buffers",
-        "description": "Raises fastcgi_buffers as well; fastcgi_buffer_size 32k with the default buffers fails nginx -t"
+        "value": "fastcgi_buffers +[0-9]+ +[0-9]+k",
+        "description": "Sets fastcgi_buffers explicitly as well; fastcgi_buffer_size 32k with the default buffers fails nginx -t"
       },
       {
         "type": "content_regex",
-        "value": "fastcgi\\.logging",
-        "description": "Names fastcgi.logging as the setting that sends logged errors to nginx"
+        "value": "fastcgi\\.logging *= *(off|0)",
+        "description": "Turns off fastcgi.logging, the setting that sends logged errors to nginx"
       },
       {
         "type": "content_regex",
@@ -676,7 +677,9 @@
       "passing": "With fastcgi.logging on, PHP sent a long stack trace to nginx as FastCGI STDERR, and together with the headers it overflowed the buffer. Each overflow disabled one address of app until none was left. Set fastcgi.logging = Off, fastcgi_buffers 64 4k with fastcgi_buffer_size 32k, and server app:9000 max_fails=0.",
       "failing": [
         "Increase pm.max_children in php-fpm and add keepalive 32 to the upstream.",
-        "Set fastcgi_buffer_size 32k and server app:9000 max_fails=0."
+        "Set fastcgi_buffer_size 32k and server app:9000 max_fails=0.",
+        "Keep the default fastcgi_buffers, set fastcgi_buffer_size 32k, fastcgi.logging = Off and server app:9000 max_fails=0.",
+        "Set fastcgi.logging = On, fastcgi_buffers 64 4k, fastcgi_buffer_size 32k and server app:9000 max_fails=0."
       ]
     }
   }
