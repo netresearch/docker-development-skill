@@ -129,16 +129,20 @@ fails to start, and everything that waits for it with
 `depends_on: condition: service_healthy` stays down. The same applies to any
 engine swap that changes the on-disk format.
 
+First decide what the old volume holds. All of the following discard it, which
+is fine for a cache; PHP sessions stored there go with it, so every user logs in
+again. A store with durable records or queue data needs a verified backup and an
+engine-specific migration first.
+
 Give the new engine a fresh volume, any of:
 
 - rename the service (`redis` → `valkey`): a new service gets new anonymous
-  volumes, and the old container is removed with `--remove-orphans` or
-  `docker rm -fv`;
-- `docker compose up -d -V` (`--renew-anon-volumes`) for that deploy;
+  volumes. Remove the old container with `--remove-orphans`, or with
+  `docker rm -fv` to delete its anonymous volume as well;
+- `docker compose up -d -V --no-deps valkey` for that deploy. Name the service:
+  a bare `-V` renews the anonymous volumes of every service it recreates, and a
+  database without a mounted data directory would start empty;
 - mount a named volume or bind mount and empty it deliberately.
-
-A cache loses nothing by this; PHP sessions stored in it do — every user logs
-in again.
 
 ## Healthcheck probes inside minimal images
 
@@ -151,13 +155,18 @@ after moving a service to Alpine:
   Traefik Docker provider does) removes its route.
 - **`localhost` is IPv6 first.** busybox `wget http://localhost/` tries `::1`
   first and reports `Connection refused` when the server listens on IPv4 only
-  (`listen 80;` in nginx). Probe `127.0.0.1` explicitly.
+  (`listen 80;` in nginx). Probe the address the server listens on, `127.0.0.1`
+  for an IPv4 listener.
 
 ```yaml
 healthcheck:
-  # status.php is answered by PHP, so the probe covers nginx and php-fpm.
+  # Nextcloud's status.php runs through the FastCGI location, so the probe covers nginx and php-fpm.
   test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/status.php"]
 ```
+
+Use an endpoint your application provides and that nginx passes to PHP. A path
+that does not exist answers 404 and marks a working container unhealthy; a file
+nginx serves statically stays healthy with php-fpm down.
 
 Read the probe's own output before changing the service:
 `docker inspect -f '{{range .State.Health.Log}}{{.ExitCode}} {{.Output}}{{end}}' <container>`.

@@ -130,8 +130,8 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 
 ## Compose Essentials
 
-- startup ordering: `depends_on.condition: service_healthy` + `healthcheck` `start_period`. The probe runs with the image's own tools: Alpine has busybox `wget`, no `curl`, and `localhost` resolves to `::1` first -- probe `127.0.0.1` (`references/compose-runtime-lifecycle.md`); `mariadb:11+` has no `mysqladmin` -- use `healthcheck.sh` (`references/database-container-readiness.md`)
-- swapping a service's image keeps its anonymous `VOLUME` data (Redis → Valkey reuses `/data`) -- rename the service or `up -V` (`references/compose-runtime-lifecycle.md`)
+- startup ordering: `depends_on.condition: service_healthy` + `healthcheck` `start_period`. The probe runs with the image's own tools: Alpine has busybox `wget`, no `curl`, and `localhost` resolves to `::1` first -- probe the address the server listens on, `127.0.0.1` for IPv4 (`references/compose-runtime-lifecycle.md`); `mariadb:11+` has no `mysqladmin` -- use `healthcheck.sh` (`references/database-container-readiness.md`)
+- swapping a service's image keeps its anonymous `VOLUME` data (Redis → Valkey reuses `/data`) -- for disposable data rename the service or run `up -V --no-deps <service>`; a bare `-V` also renews a database's anonymous volume (`references/compose-runtime-lifecycle.md`)
 - `networks.internal: true` isolates databases
 - `profiles: [debug]`: start only with `--profile debug`. `down` and `--remove-orphans` ignore a disabled profile's containers, so a service you stop enabling keeps running -- `docker compose --profile '*' down`, or `docker compose down <service>` (`references/compose-runtime-lifecycle.md`)
 - logging drivers block by default: a stalled remote endpoint (`awslogs`, ...) stalls the app's writes; `mode: non-blocking` + `max-buffer-size` drops lines instead, protecting a running container only (`references/compose-runtime-lifecycle.md`)
@@ -147,9 +147,9 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 - `references/gpg-verification.md` -- gpgv patterns; stale keybox locks
 - `references/registry-catalogue-and-pin-rot.md` -- catalogue probes; pin rot
 - `references/build-secret-leaks.md` -- `ARG` in provenance
-- `references/php-fpm-worker-starvation.md` -- keepalive pins php-fpm; a long PHP error overflows `fastcgi_buffer_size` and `max_fails` turns one 502 into `no live upstreams` for everyone
+- `references/php-fpm-worker-starvation.md` -- keepalive pins php-fpm; with `fastcgi.logging` on a long PHP error overflows `fastcgi_buffer_size`, and on a service with several addresses `max_fails` turns those 502s into `no live upstreams` for everyone
 - `references/engine-and-image-upgrades.md` -- `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check; a base image changing its `USER`; PHP 8.5 OPcache built into the core
-- `references/database-container-readiness.md` -- seeded DB images log `ready for connections` twice; verify the seed, not the log; `mariadb:11+` drops the `mysql*` binaries; major upgrade of an existing data directory (`MARIADB_AUTO_UPGRADE`, `healthcheck.sh`, `stop_grace_period`)
+- `references/database-container-readiness.md` -- seeded DB images log `ready for connections` twice; verify the seed, not the log; `mariadb:11+` drops the `mysql*` binaries; major upgrade of an existing data directory (`MARIADB_AUTO_UPGRADE`, `healthcheck.sh`, manual `docker stop -t`, `stop_grace_period`)
 - `references/compose-runtime-lifecycle.md` -- a disabled profile's container survives `down` and `up --remove-orphans`; blocking vs non-blocking log delivery and what non-blocking does not protect; an image swap keeps the anonymous volume; healthcheck probes inside Alpine images
 - `references/compose-config-and-env.md` -- a `COMPOSE_FILE` pin disables the `compose.override.yml` merge; `docker compose config` re-escapes `$` as `$$`, so it is not what the container receives
 - `references/image-ca-trust.md` -- after a CA compromise: measure the published image's `ca-certificates` version and root subjects; `grep` for a CA name in the bundle always returns 0

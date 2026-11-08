@@ -635,41 +635,48 @@
       },
       {
         "type": "content_regex",
-        "value": "stop_grace_period|clean(ly)? shut ?down|Shutdown complete",
-        "description": "Protects the clean shutdown of the old server before the upgrade"
+        "value": "docker (compose )?stop .{0,20}(-t|--time)|Shutdown complete",
+        "description": "Stops the running 10.6 container explicitly with enough time and checks the clean shutdown; stop_grace_period in the new file does not apply to it"
       }
     ],
     "samples": {
-      "passing": "The 11.x image no longer ships mysqladmin, so the probe fails and app never starts. Use test: [\"CMD\", \"healthcheck.sh\", \"--connect\", \"--innodb_initialized\"], set MARIADB_AUTO_UPGRADE: \"1\" so the existing directory is upgraded and gets the healthcheck user, and add stop_grace_period: 120s so the old server shuts down cleanly first.",
+      "passing": "The 11.x image no longer ships mysqladmin, so the probe fails and app never starts. Use test: [\"CMD\", \"healthcheck.sh\", \"--connect\", \"--innodb_initialized\"] and set MARIADB_AUTO_UPGRADE: \"1\" so the existing directory is upgraded and gets the healthcheck user. Stop the old container with docker stop -t 120 and confirm Shutdown complete in its log before starting the new image.",
       "failing": [
-        "Change the image to mariadb:11.8 and keep the mysqladmin ping healthcheck; nothing else is needed."
+        "Change the image to mariadb:11.8 and keep the mysqladmin ping healthcheck; nothing else is needed.",
+        "The 11.x image no longer ships mysqladmin. Use healthcheck.sh, set MARIADB_AUTO_UPGRADE and add stop_grace_period: 120s, then run docker compose up -d."
       ]
     }
   },
   {
     "name": "nginx-php-fpm-too-big-header-spreads-502",
-    "prompt": "Behind nginx with `upstream php-handler { server app:9000; }` (compose service app, php-fpm with catch_workers_output = yes), one user revoked a session and from then on every user got 502 for a while. The nginx error log shows `upstream sent too big header while reading response header from upstream`, then `upstream server temporarily disabled`, then `no live upstreams while connecting to upstream`. What happened and how do we fix it?",
+    "prompt": "Behind nginx with `upstream php-handler { server app:9000; }` (compose service app with an IPv4 and an IPv6 address, PHP built from source), one user revoked a session and from then on every user got 502 for a while. The nginx error log shows `upstream sent too big header while reading response header from upstream`, then `upstream server temporarily disabled`, then `no live upstreams while connecting to upstream`. What happened and how do we fix it?",
     "assertions": [
       {
         "type": "content_regex",
         "value": "fastcgi_buffer_size",
-        "description": "Raises fastcgi_buffer_size, the buffer the PHP stderr output and the headers overflowed"
+        "description": "Raises fastcgi_buffer_size, the buffer the logged PHP error and the headers overflowed"
       },
       {
         "type": "content_regex",
-        "value": "stderr",
-        "description": "Explains that the PHP error log on stderr shares the FastCGI header buffer"
+        "value": "fastcgi_buffers",
+        "description": "Raises fastcgi_buffers as well; fastcgi_buffer_size 32k with the default buffers fails nginx -t"
+      },
+      {
+        "type": "content_regex",
+        "value": "fastcgi\\.logging",
+        "description": "Names fastcgi.logging as the setting that sends logged errors to nginx"
       },
       {
         "type": "content_regex",
         "value": "max_fails *= *0",
-        "description": "Sets max_fails=0 so one failed request does not disable the only backend"
+        "description": "Sets max_fails=0 so overflowing requests do not disable the addresses of the only backend"
       }
     ],
     "samples": {
-      "passing": "PHP logged a long stack trace to stderr, which FastCGI sends together with the response headers, and it overflowed fastcgi_buffer_size. nginx counted that as an upstream failure and disabled every address of app. Set fastcgi_buffer_size 32k and server app:9000 max_fails=0.",
+      "passing": "With fastcgi.logging on, PHP sent a long stack trace to nginx as FastCGI STDERR, and together with the headers it overflowed the buffer. Each overflow disabled one address of app until none was left. Set fastcgi.logging = Off, fastcgi_buffers 64 4k with fastcgi_buffer_size 32k, and server app:9000 max_fails=0.",
       "failing": [
-        "Increase pm.max_children in php-fpm and add keepalive 32 to the upstream."
+        "Increase pm.max_children in php-fpm and add keepalive 32 to the upstream.",
+        "Set fastcgi_buffer_size 32k and server app:9000 max_fails=0."
       ]
     }
   }
