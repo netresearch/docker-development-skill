@@ -137,11 +137,14 @@ engine-specific migration first.
 Give the new engine a fresh volume, any of:
 
 - rename the service (`redis` → `valkey`): a new service gets new anonymous
-  volumes. Remove the old container with `--remove-orphans`, or with
-  `docker rm -fv` to delete its anonymous volume as well;
-- `docker compose up -d -V --no-deps valkey` for that deploy. Name the service:
-  a bare `-V` renews the anonymous volumes of every service it recreates, and a
-  database without a mounted data directory would start empty;
+  volumes. Update everything that uses the old name, `depends_on` entries and
+  clients such as `REDIS_HOST: valkey`, or give the service a `redis` network
+  alias. Remove the old container with `--remove-orphans`, or with
+  `docker rm -fv <old-container>` to delete its anonymous volume as well;
+- keep the name and run `docker compose up -d -V --no-deps <service>` for that
+  deploy. Name the service: a bare `-V` renews the anonymous volumes of every
+  service it recreates, and a database without a mounted data directory would
+  start empty;
 - mount a named volume or bind mount and empty it deliberately.
 
 ## Healthcheck probes inside minimal images
@@ -166,7 +169,9 @@ healthcheck:
 
 Use an endpoint your application provides and that nginx passes to PHP. A path
 that does not exist answers 404 and marks a working container unhealthy; a file
-nginx serves statically stays healthy with php-fpm down.
+nginx serves statically stays healthy with php-fpm down. With several nginx
+server blocks the probe reaches the default one, so select the application's
+with `--header "Host: app.example"`.
 
 Read the probe's own output before changing the service:
 `docker inspect -f '{{range .State.Health.Log}}{{.ExitCode}} {{.Output}}{{end}}' <container>`.
