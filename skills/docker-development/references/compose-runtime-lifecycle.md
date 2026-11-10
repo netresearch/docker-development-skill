@@ -113,3 +113,65 @@ that log lines arrive after the deploy.
 
 `mode` and `max-buffer-size` can also be set host-wide under `log-opts` in
 `daemon.json`; check it before assuming a container runs in blocking mode.
+
+## Swapping the image keeps the anonymous volume
+
+An image that declares `VOLUME` (`/data` in the Redis and Valkey images,
+`/var/lib/mysql` in MariaDB) gets an anonymous volume when the compose file
+mounts nothing there. Recreating the container keeps that volume: Compose
+reattaches the previous container's anonymous volumes to its replacement,
+including when only the `image:` changed.
+
+So replacing Redis with Valkey under the same service name hands Valkey the
+old `/data/dump.rdb`. Redis 8 writes RDB versions Valkey does not load by
+default (per Valkey's migration docs, not observed here); the container then
+fails to start, and everything that waits for it with
+`depends_on: condition: service_healthy` stays down. The same applies to any
+engine swap that changes the on-disk format.
+
+First decide what the old volume holds. All of the following discard it, which
+is fine for a cache; PHP sessions stored there go with it, so every user logs in
+again. A store with durable records or queue data needs a verified backup and an
+engine-specific migration first.
+
+Give the new engine a fresh volume, any of:
+
+- rename the service (`redis` → `valkey`): a new service gets new anonymous
+  volumes. Update everything that uses the old name, `depends_on` entries and
+  clients such as `REDIS_HOST: valkey`, or give the service a `redis` network
+  alias. Remove the old container with `--remove-orphans`, or with
+  `docker rm -fv <old-container>` to delete its anonymous volume as well;
+- keep the name and run `docker compose up -d -V --no-deps <service>` for that
+  deploy. Name the service: a bare `-V` renews the anonymous volumes of every
+  service it recreates, and a database without a mounted data directory would
+  start empty;
+- mount a named volume or bind mount and empty it deliberately.
+
+## Healthcheck probes inside minimal images
+
+A healthcheck runs inside the container, with that image's tools. Two traps
+after moving a service to Alpine:
+
+- **No `curl`.** Alpine images carry busybox `wget`, not `curl`. A probe
+  `["CMD", "curl", ...]` fails with `executable file not found`, the container
+  stays `unhealthy`, and a reverse proxy that skips unhealthy containers (the
+  Traefik Docker provider does) removes its route.
+- **`localhost` is IPv6 first.** busybox `wget http://localhost/` tries `::1`
+  first and reports `Connection refused` when the server listens on IPv4 only
+  (`listen 80;` in nginx). Probe the address the server listens on, `127.0.0.1`
+  for an IPv4 listener.
+
+```yaml
+healthcheck:
+  # Nextcloud's status.php runs through the FastCGI location, so the probe covers nginx and php-fpm.
+  test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/status.php"]
+```
+
+Use an endpoint your application provides and that nginx passes to PHP. A path
+that does not exist answers 404 and marks a working container unhealthy; a file
+nginx serves statically stays healthy with php-fpm down. With several nginx
+server blocks the probe reaches the default one, so select the application's
+with `--header "Host: app.example"`.
+
+Read the probe's own output before changing the service:
+`docker inspect -f '{{range .State.Health.Log}}{{.ExitCode}} {{.Output}}{{end}}' <container>`.

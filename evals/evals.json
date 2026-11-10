@@ -613,5 +613,74 @@
         "Call build-container-bake.yml with cache: false on every run so nothing is ever cached."
       ]
     }
+  },
+  {
+    "name": "mariadb-11-major-upgrade-healthcheck",
+    "prompt": "Our compose stack runs mariadb:10.6 with a persistent ./data directory and the healthcheck `mysqladmin ping -h localhost -u$$MYSQL_USER -p$$MYSQL_PASSWORD`. The app service waits with depends_on condition: service_healthy. We want to move to mariadb:11.8. What do we have to change in the compose file?",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "healthcheck\\.sh",
+        "description": "Replaces the mysqladmin probe with the image's healthcheck.sh"
+      },
+      {
+        "type": "content_regex",
+        "value": "mysqladmin.{0,120}(not|no longer|missing|removed|gone|absent)|(no longer|not|missing|removed|gone).{0,80}mysqladmin",
+        "description": "Says that mysqladmin is no longer in the 11.x image"
+      },
+      {
+        "type": "content_regex",
+        "value": "MARIADB_AUTO_UPGRADE",
+        "description": "Sets MARIADB_AUTO_UPGRADE so the existing data directory is upgraded and gets the healthcheck user"
+      },
+      {
+        "type": "content_regex",
+        "value": "docker (compose )?stop .{0,20}(-t|--time)",
+        "description": "Stops the running 10.6 container explicitly with enough time and checks the clean shutdown; stop_grace_period in the new file does not apply to it"
+      }
+    ],
+    "samples": {
+      "passing": "The 11.x image no longer ships mysqladmin, so the probe fails and app never starts. Use test: [\"CMD\", \"healthcheck.sh\", \"--connect\", \"--innodb_initialized\"] and set MARIADB_AUTO_UPGRADE: \"1\" so the existing directory is upgraded and gets the healthcheck user. Stop the old container with docker stop -t 120 and confirm Shutdown complete in its log before starting the new image.",
+      "failing": [
+        "Change the image to mariadb:11.8 and keep the mysqladmin ping healthcheck; nothing else is needed.",
+        "The 11.x image no longer ships mysqladmin. Use healthcheck.sh, set MARIADB_AUTO_UPGRADE and add stop_grace_period: 120s, then run docker compose up -d.",
+        "The 11.x image no longer ships mysqladmin. Use healthcheck.sh, set MARIADB_AUTO_UPGRADE, run docker compose up -d and check for Shutdown complete in the log afterwards."
+      ]
+    }
+  },
+  {
+    "name": "nginx-php-fpm-too-big-header-spreads-502",
+    "prompt": "Behind nginx with `upstream php-handler { server app:9000; }` (compose service app with an IPv4 and an IPv6 address, PHP built from source), one user revoked a session and from then on every user got 502 for a while. The nginx error log shows `upstream sent too big header while reading response header from upstream`, then `upstream server temporarily disabled`, then `no live upstreams while connecting to upstream`. What happened and how do we fix it?",
+    "assertions": [
+      {
+        "type": "content_regex",
+        "value": "fastcgi_buffer_size",
+        "description": "Raises fastcgi_buffer_size, the buffer the logged PHP error and the headers overflowed"
+      },
+      {
+        "type": "content_regex",
+        "value": "fastcgi_buffers +[0-9]+ +[0-9]+k",
+        "description": "Sets fastcgi_buffers explicitly as well; fastcgi_buffer_size 32k with the default buffers fails nginx -t"
+      },
+      {
+        "type": "content_regex",
+        "value": "fastcgi\\.logging *= *(off|0)",
+        "description": "Turns off fastcgi.logging, the setting that sends logged errors to nginx"
+      },
+      {
+        "type": "content_regex",
+        "value": "max_fails *= *0",
+        "description": "Sets max_fails=0 so overflowing requests do not disable the addresses of the only backend"
+      }
+    ],
+    "samples": {
+      "passing": "With fastcgi.logging on, PHP sent a long stack trace to nginx as FastCGI STDERR, and together with the headers it overflowed the buffer. Each overflow disabled one address of app until none was left. Set fastcgi.logging = Off, fastcgi_buffers 64 4k with fastcgi_buffer_size 32k, and server app:9000 max_fails=0.",
+      "failing": [
+        "Increase pm.max_children in php-fpm and add keepalive 32 to the upstream.",
+        "Set fastcgi_buffer_size 32k and server app:9000 max_fails=0.",
+        "Keep the default fastcgi_buffers, set fastcgi_buffer_size 32k, fastcgi.logging = Off and server app:9000 max_fails=0.",
+        "Set fastcgi.logging = On, fastcgi_buffers 64 4k, fastcgi_buffer_size 32k and server app:9000 max_fails=0."
+      ]
+    }
   }
 ]

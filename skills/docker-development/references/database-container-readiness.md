@@ -115,12 +115,70 @@ in the first case is about a path production never takes.
 ## The client binary differs per image
 
 The examples below call `mariadb`. The official MySQL image ships `mysql`
-instead, and the MariaDB image has carried `mariadb` as the primary name since
-10.5 with `mysql` kept as a symlink. Substitute per image rather than copying:
+instead. The MariaDB image has carried `mariadb` as the primary name since
+10.5, but the `mysql*` names are gone from 11.0 on. Measured 2026-11:
+
+| Image | `mysql` | `mysqladmin` | `mariadb`, `mariadb-admin` | `healthcheck.sh` |
+|---|---|---|---|---|
+| `mariadb:10.6` | yes | yes | yes | yes |
+| `mariadb:11.8` | **no** | **no** | yes | yes |
+
+Substitute per image rather than copying:
 
 ```bash
 client=mariadb   # MySQL image: client=mysql
 ```
+
+A compose healthcheck written for 10.x — `mysqladmin ping` — therefore fails on
+every probe after a bump to 11.x, the service never turns healthy, and every
+service with `depends_on: condition: service_healthy` on it never starts. Check
+which binaries the target image has before the bump:
+
+```bash
+docker run --rm --entrypoint sh mariadb:11.8 -c \
+  'for b in mysql mysqladmin mariadb mariadb-admin healthcheck.sh; do command -v $b >/dev/null && echo "$b yes" || echo "$b no"; done'
+```
+
+## Upgrading an existing data directory across a major version
+
+Three settings and one manual stop decide whether a bump such as 10.6 → 11.8 on
+a persistent data directory comes up healthy:
+
+```yaml
+database:
+  image: mariadb:11.8
+  stop_grace_period: 120s
+  healthcheck:
+    test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+  environment:
+    MARIADB_AUTO_UPGRADE: "1"
+```
+
+* **`healthcheck.sh`** ships in the image and needs no password on the command
+  line. It authenticates as a `healthcheck` user, using credentials in
+  `.my-healthcheck.cnf` in the data directory. The entrypoint creates both on a
+  fresh initialisation, or on an existing directory when `MARIADB_AUTO_UPGRADE`
+  is set. A directory initialised by an image that did not create them has
+  neither, and without that variable the probe fails although the server is up.
+  Check with `select user, host from mysql.user` before blaming the server.
+* **`MARIADB_AUTO_UPGRADE=1`** runs `mariadb-upgrade` on start (the log shows
+  `MariaDB upgrade information missing, assuming required`). Its backup covers
+  only the `mysql` schema: dump the application data yourself first. An
+  upgraded directory cannot be started by the old version again, so a copy of
+  the stopped directory is the only exact rollback.
+* **The manual stop**: the redo log format changed in 10.8, and newer servers
+  refuse a pre-10.8 directory that was not shut down cleanly. Docker's default
+  of 10 s before `SIGKILL` is not enough on a busy server, and adding
+  `stop_grace_period` to the compose file does not help the container already
+  running. Measured with Compose 5.7.0: recreating a container that was started
+  without the value took 11 s with 25 s in the new file, the next recreate 26 s.
+  So stop the old container with `docker stop -t 120` and confirm
+  `Shutdown complete` in its log before starting the new image.
+* **`stop_grace_period`** covers every stop after that, reboots included.
+
+After the start, check `select version()`, the table count of the application
+schema and `select user, host from mysql.user` — the `healthcheck` rows must be
+there.
 
 ## Prefer TCP over the socket for one-shot checks
 
