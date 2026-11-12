@@ -140,7 +140,7 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 ## References
 
 - `references/bake-ci-cache.md` -- the shared bake reusable; `-f docker-bake.hcl` beside a compose file; GHA cache scope per target; uncached scheduled rebuild that still writes the cache; helper steps in bake-action's directory
-- `references/ci-testing.md` -- CI testing patterns for Docker images; busybox `sh` vs bash in `-c` strings; `timeout` around `docker compose run` leaves the container running when PID 1 ignores the signal; a negative control taken from a mutable base tag expires when upstream ships the fix
+- `references/ci-testing.md` -- CI testing patterns for Docker images; busybox `sh` vs bash in `-c` strings; `timeout` around `docker compose run` leaves the container running when PID 1 ignores the signal; a negative control taken from a mutable base tag expires when upstream ships the fix; a local fallback build that matches CI (`git archive <tag> | docker build -`)
 - `references/dind-testing-patterns.md` -- Docker-in-Docker testing patterns
 - `references/bind-mount-ownership.md` -- root-owned bind-mount artifacts; a tmpfs on a parent path hiding a volume below it
 - `references/gpg-verification.md` -- gpgv patterns; stale keybox locks

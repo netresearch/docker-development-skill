@@ -528,3 +528,37 @@ Take the control from something that cannot change underneath you:
 
 When the control flips, read it as news about the base image: the own
 workaround may now be redundant (the AIDA image dropped its PHP build).
+
+## Pattern 14: A local fallback build that must match CI builds the tag's tree, not the working copy
+
+A `make build-version` kept as the fallback for when CI cannot run is only a
+fallback if it produces the image CI would have produced. Two shapes break that
+silently: building `.` (the working copy, with whatever is uncommitted or
+untracked in it), and `git reset --hard <tag>` before the build (which discards
+local work and still builds untracked files).
+
+Build the tagged tree itself, as the CI clone sees it, without touching the
+working copy:
+
+```bash
+git archive --format=tar "$TAG" \
+  | docker build --pull --build-arg COMPOSER_AUTH -t "$IMAGE:$TAG" -
+```
+
+`git archive` emits the tracked files of the tag only; `docker build -` takes a
+tar on stdin as the build context, and `.dockerignore` inside it still applies.
+Pass the same build args as the CI job, and nothing more: a local `MODE=prod`
+the CI job never sets builds a different image.
+
+Prove the match on content, not on digests (layer timestamps differ): build a
+tag CI already published and compare a file the build generates, for a PHP
+image `vendor/composer/installed.json`:
+
+```bash
+for ref in "$IMAGE:$TAG" "$CI_IMAGE:$TAG"; do
+  docker run --rm --entrypoint sh "$ref" -c 'sha256sum /var/www/vendor/composer/installed.json'
+done
+```
+
+Equal sums mean the same resolved packages. Measured on a TYPO3 application
+image: identical, 134 packages on both sides.
