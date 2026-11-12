@@ -497,3 +497,34 @@ docker exec <container> kill -INT <pid-inside-container>
 
 `docker kill --signal=INT <container>` is not equivalent: it signals PID 1 only,
 and a shell script as PID 1 does not forward the signal to its child.
+
+## Pattern 13: A negative control against a mutable base tag expires
+
+Pattern 11 asks for a control that shows a check can fail. This one is about
+where the control comes from. A verify script that proves its check can fail by running it against the base
+image ("the base lacks the fix, so finding it in our image means something")
+holds only while that base stays unfixed. Pull the base by a moving tag
+(`:latest`, `:latest-nginx-stable`) and the day upstream ships the fix, the
+control flips and the nightly build goes red on a correct image.
+
+Observed in `aida/typo3-10/t3re` (2026-11-12): the image rebuilt PHP 7.4 from a
+CVE backport branch, and `tests/verify.sh` required the base
+`support/typo3-10/t3re:latest-nginx-stable` *not* to export the fix symbol.
+When the base image started building the same backport, the build failed with
+`reference … already exports … - check proves nothing`, although the image was
+patched.
+
+Take the control from something that cannot change underneath you:
+
+- an image pinned by digest, also when it is a third-party image of the
+  unfixed version: `php:7.4-fpm-alpine` (7.4.33) is a tag that can move, so
+  record `php@sha256:0aeb129a…` as `docker image inspect --format
+  '{{index .RepoDigests 0}}'` prints it. Run the control once when the check is
+  written and record image, digest and result in the commit or PR, rather than
+  in every build;
+- or, if the control stays in the build, make it informational: report "the
+  reference now carries the fix too" and keep the positive check on the image
+  as the gate.
+
+When the control flips, read it as news about the base image: the own
+workaround may now be redundant (the AIDA image dropped its PHP build).
