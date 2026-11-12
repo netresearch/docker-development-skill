@@ -516,9 +516,12 @@ patched.
 
 Take the control from something that cannot change underneath you:
 
-- an image pinned by digest, or a third-party image of the unfixed version
-  (`php:7.4-fpm-alpine` for 7.4.33), run once when the check is written and
-  recorded in the commit or PR, rather than in every build;
+- an image pinned by digest, also when it is a third-party image of the
+  unfixed version: `php:7.4-fpm-alpine` (7.4.33) is a tag that can move, so
+  record `php@sha256:0aeb129a…` as `docker image inspect --format
+  '{{index .RepoDigests 0}}'` prints it. Run the control once when the check is
+  written and record image, digest and result in the commit or PR, rather than
+  in every build;
 - or, if the control stays in the build, make it informational: report "the
   reference now carries the fix too" and keep the positive check on the image
   as the gate.
