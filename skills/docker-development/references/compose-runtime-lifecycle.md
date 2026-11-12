@@ -152,4 +152,19 @@ and without it (then the directory name): `docker compose -p foo config` renders
 itself. A value that only carries it through another variable — for example
 `FILTER=label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}` in `.env` —
 renders as `label=com.docker.compose.project=` with an empty name. Check the
-rendered filter with `docker compose config` before deploying.
+rendered filter with `docker compose config` before deploying, and compare it
+with the project name `docker compose ls` shows for the running stack. Compose
+5.7.0 renders the `-p` name even when `.env` sets `COMPOSE_PROJECT_NAME=bar`
+(`-p foo` gave `label=com.docker.compose.project=foo`); older releases
+interpolated the `.env` value instead
+([docker/compose#11734](https://github.com/docker/compose/issues/11734)).
+
+The filter separates projects by name, so two stacks that share a project name
+(for example two checkouts in directories of the same name) still see each
+other's jobs. Give each stack on a host its own name.
+
+The filter only decides which jobs Ofelia schedules; it is no security
+boundary. A container that mounts the Docker socket, `:ro` or not, can call the
+whole Docker API, and on a rootful daemon that means control of the host. Run
+only a scheduler you trust with that access, or put a restricted Docker API
+proxy in front of the socket when the stacks must not reach each other.
