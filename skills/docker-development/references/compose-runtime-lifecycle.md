@@ -138,13 +138,13 @@ services:
 Ofelia's own documentation recommends `--docker-filter`, or the
 `OFELIA_DOCKER_FILTER` environment variable, for this.
 
-Measured with Docker Compose 5.7.0 and Ofelia 1.0.1 and 1.1.0, two throwaway
-projects on one host, each with one job label:
+Measured with Docker Compose 5.7.0, two throwaway projects on one host, each
+with one job label:
 
-| Ofelia `command` | jobs it registers |
-|---|---|
-| `daemon` without `--docker-filter` | its own and the other project's |
-| `daemon --docker-filter label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}` | its own only (`jobCount=1`) |
+| Ofelia `command` | Ofelia | jobs it registers |
+|---|---|---|
+| `daemon` without `--docker-filter` | 1.0.1 | its own and the other project's |
+| `daemon --docker-filter label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}` | 1.0.1, 1.1.0 | its own only (`jobCount=1`) |
 
 `${COMPOSE_PROJECT_NAME}` interpolates to the project's actual name, with `-p`
 and without it (then the directory name): `docker compose -p foo config` renders
