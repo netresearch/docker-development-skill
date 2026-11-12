@@ -26,6 +26,7 @@ ARG REPO=https://github.com/php/php-src.git
 ARG BRANCH=PHP-7.4-CVE-2026-109618-109619
 ARG COMMIT=<40-character sha>
 
+WORKDIR /usr/src/php
 RUN git init -q . && git remote add origin "$REPO" && \
     git fetch -q --depth 50 origin "refs/heads/${BRANCH}" && \
     git merge-base --is-ancestor "${COMMIT}" FETCH_HEAD && \
@@ -44,6 +45,10 @@ Each step carries one guarantee:
   full hash — an abbreviation or a ref name that `checkout` would still
   resolve.
 - `rm -rf .git` keeps the history out of the layer.
+- `WORKDIR` names a directory that no earlier step writes to. `checkout`
+  leaves files that are already there in place, so a `COPY` into the same
+  path would end up in the build next to the pinned source. `WORKDIR` does
+  not empty a directory.
 
 Source: an internal PHP 7.4 image build that compiles php-src from the branch
 named above. The foreign-commit failure was
