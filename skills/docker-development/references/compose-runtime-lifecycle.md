@@ -3,8 +3,9 @@
 
 # Compose Runtime Lifecycle
 
-Two behaviours that look fine in a compose file and only show up when the stack
-is redeployed, or when a remote log endpoint stalls. Neither raises an error.
+Three behaviours that look fine in a compose file and only show up when the
+stack is redeployed, when a remote log endpoint stalls, or when a second stack
+shares the host. None of them raises an error.
 
 ## A disabled profile's container is invisible to `down`
 
@@ -113,3 +114,42 @@ that log lines arrive after the deploy.
 
 `mode` and `max-buffer-size` can also be set host-wide under `log-opts` in
 `daemon.json`; check it before assuming a container runs in blocking mode.
+
+## A socket-reading scheduler runs every stack's jobs
+
+A scheduler that reads job labels through the Docker socket, such as Ofelia
+(`ghcr.io/netresearch/ofelia`), sees every container on the host, not only the
+containers of its own Compose project. On a shared host it registers the job
+labels of other stacks too. A stack with its own Ofelia then runs its jobs
+twice; a stack whose scheduler was deliberately switched off runs them anyway.
+
+Restrict the scheduler to its own project with the label Compose sets on every
+container:
+
+```yaml
+services:
+  ofelia:
+    image: ghcr.io/netresearch/ofelia:1.1.0
+    command: daemon --docker-filter label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+```
+
+Ofelia's own documentation recommends `--docker-filter`, or the
+`OFELIA_DOCKER_FILTER` environment variable, for this.
+
+Measured with Docker Compose 5.7.0 and Ofelia 1.0.1 and 1.1.0, two throwaway
+projects on one host, each with one job label:
+
+| Ofelia `command` | jobs it registers |
+|---|---|
+| `daemon` without `--docker-filter` | its own and the other project's |
+| `daemon --docker-filter label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}` | its own only (`jobCount=1`) |
+
+`${COMPOSE_PROJECT_NAME}` interpolates to the project's actual name, with `-p`
+and without it (then the directory name): `docker compose -p foo config` renders
+`label=com.docker.compose.project=foo`. Write the variable in the compose file
+itself. A value that only carries it through another variable — for example
+`FILTER=label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}` in `.env` —
+renders as `label=com.docker.compose.project=` with an empty name. Check the
+rendered filter with `docker compose config` before deploying.
