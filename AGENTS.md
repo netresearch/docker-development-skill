@@ -17,7 +17,8 @@
 │       ├── database-container-readiness.md  # seeded DB images: init races
 │       ├── compose-runtime-lifecycle.md     # disabled profiles vs down; log delivery mode
 │       ├── compose-config-and-env.md        # COMPOSE_FILE vs override; config re-escapes $
-│       └── image-ca-trust.md           # roots a published image trusts after a CA compromise
+│       ├── image-ca-trust.md           # roots a published image trusts after a CA compromise
+│       └── pinned-source-fetch.md      # source pinned to a commit: fetch the branch, check ancestry
 ├── skills/docker-via-wsl/              # Windows: run docker through WSL2
 │   ├── SKILL.md                        # Skill definition
 │   └── references/
@@ -69,7 +70,8 @@
 - [CI Testing](skills/docker-development/references/ci-testing.md) — CI testing patterns
 - [DinD Patterns](skills/docker-development/references/dind-testing-patterns.md) — Docker-in-Docker testing
 - [Bind-Mount Ownership](skills/docker-development/references/bind-mount-ownership.md) — root-owned bind-mount artifacts; a tmpfs on a parent path hiding a volume below it
-- [Engine & Image Upgrades](skills/docker-development/references/engine-and-image-upgrades.md) — `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check; base image changing its `USER`; PHP 8.5 OPcache built into the core
+- [Engine & Image Upgrades](skills/docker-development/references/engine-and-image-upgrades.md) — `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check; base image changing its `USER`; PHP 8.5 OPcache built into the core; test the images built `FROM` a base before changing it
+- [Pinned Source Fetch](skills/docker-development/references/pinned-source-fetch.md) — a commit hash fetched from GitHub may come from any fork; fetch the branch and require the pin to be its ancestor
 - [Database Container Readiness](skills/docker-development/references/database-container-readiness.md) — seeded DB images log `ready for connections` twice
 - [Compose Runtime Lifecycle](skills/docker-development/references/compose-runtime-lifecycle.md) — a disabled profile's container survives `down`; blocking vs non-blocking log delivery
 - [Compose Config and Env](skills/docker-development/references/compose-config-and-env.md) — a `COMPOSE_FILE` pin disables the `compose.override.yml` merge; `docker compose config` re-escapes `$`

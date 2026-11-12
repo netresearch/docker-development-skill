@@ -147,7 +147,8 @@ Exclude: `.git`, `node_modules`/`vendor`, `.env*`, `*.pem`, `*.key`
 - `references/registry-catalogue-and-pin-rot.md` -- catalogue probes; pin rot
 - `references/build-secret-leaks.md` -- `ARG` in provenance
 - `references/php-fpm-worker-starvation.md` -- keepalive pins php-fpm
-- `references/engine-and-image-upgrades.md` -- `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check; a base image changing its `USER`; PHP 8.5 OPcache built into the core
+- `references/engine-and-image-upgrades.md` -- `MinAPIVersion` cuts off socket-reading sidecars; probe-container upgrade check; a base image changing its `USER`; PHP 8.5 OPcache built into the core; run the tests of images built `FROM` a base before changing what it ships
+- `references/pinned-source-fetch.md` -- a commit hash fetched from GitHub may come from any fork; fetch the upstream branch and require the pin to be its ancestor
 - `references/database-container-readiness.md` -- seeded DB images log `ready for connections` twice; verify the seed, not the log
 - `references/compose-runtime-lifecycle.md` -- a disabled profile's container survives `down` and `up --remove-orphans`; blocking vs non-blocking log delivery and what non-blocking does not protect
 - `references/compose-config-and-env.md` -- a `COMPOSE_FILE` pin disables the `compose.override.yml` merge; `docker compose config` re-escapes `$` as `$$`, so it is not what the container receives
