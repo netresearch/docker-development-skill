@@ -250,6 +250,31 @@ answer there.
 Pair it with the consumer question — who pulls this image at all — before
 preparing a change across a fleet of them.
 
+## Changing what a base image ships breaks its consumers' tests
+
+A base image's own build and tests say nothing about the images built `FROM`
+it. Before changing what the base ships — a patched runtime, a removed package,
+a different default — find those images and run *their* test or verify scripts
+against the new base.
+
+Observed 2026-11-12: switching an internal PHP 7.4 base image to a patched
+PHP 7.4 made the nightly build of a downstream project image fail. Its
+`verify.sh` used the base image as a negative control ("the reference must NOT
+contain the fix symbol"), and the base now contained it. The downstream image
+was correct; its test assumed the base would stay unpatched.
+
+Find the consumers before the change lands:
+
+* Search the forge for the image name in `Dockerfile`s, compose files and CI
+  configuration. Where instance-wide code search is unavailable (GitLab without
+  advanced search), search each project's blobs
+  (`GET /projects/:id/search?scope=blobs&search=<image>`) across the group.
+* Search for `ARG` defaults as well: `FROM ${BASE_IMAGE}` with
+  `ARG BASE_IMAGE=registry.example.com/php/base:7.4` names the base only in the
+  `ARG` line, so a search for `FROM <image>` misses it.
+* Run each consumer's verify step against a build of the new base before
+  publishing it under the tag the consumers pull.
+
 ## Verify an image upgrade with a probe container, never from the changelog
 
 "The new major rejects our configuration" is a claim, and reading release notes
