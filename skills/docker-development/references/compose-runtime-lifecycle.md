@@ -233,8 +233,14 @@ after moving a service to Alpine:
 ```yaml
 healthcheck:
   # Nextcloud's status.php runs through the FastCGI location, so the probe covers nginx and php-fpm.
-  test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/status.php"]
+  test: ["CMD", "wget", "-Y", "off", "-q", "-O", "/dev/null", "http://127.0.0.1/status.php"]
 ```
+
+`-Y off` keeps the probe local. busybox `wget` uses `http_proxy` from the
+container's environment and ignores `no_proxy`: with
+`http_proxy=http://10.255.255.1:3128` and `no_proxy=127.0.0.1` in `nginx:alpine`,
+`wget http://127.0.0.1/` hung on the proxy until `timeout 5` killed it, and
+`wget -Y off` got 200. GNU `wget` spells the option `--no-proxy`.
 
 Use an endpoint your application provides and that nginx passes to PHP. A path
 that does not exist answers 404 and marks a working container unhealthy; a file
