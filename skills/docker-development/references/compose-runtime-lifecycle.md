@@ -168,3 +168,85 @@ boundary. A container that mounts the Docker socket, `:ro` or not, can call the
 whole Docker API, and on a rootful daemon that means control of the host. Run
 only a scheduler you trust with that access, or put a restricted Docker API
 proxy in front of the socket when the stacks must not reach each other.
+
+## Swapping the image can keep the anonymous volume
+
+Recreating a container keeps its anonymous volumes: Compose reattaches the
+previous container's anonymous volume at a path to its replacement, also when
+only the `image:` changed. It does so only for a path where the new container
+declares a volume, either through `VOLUME` in the new image or through an
+anonymous entry such as `volumes: [/data]` in the compose file.
+
+Whether an image declares `VOLUME` differs between tags. `mariadb` declares
+`/var/lib/mysql`. `redis:7` and `redis:8.0` declare `/data`; `redis:8` and
+`valkey/valkey:9` declare nothing. Check before the swap:
+`docker image inspect <image> --format '{{json .Config.Volumes}}'`.
+
+Measured with Compose 5.7.1, `redis:8.0` with a saved key, then the same
+service switched to `valkey/valkey:9`:
+
+| compose file for the new image | `/data` in the Valkey container |
+|---|---|
+| no `volumes:` | no mount; Valkey starts empty |
+| `volumes: [/data]` | the old volume; Valkey exits with `Can't handle RDB format version 12` |
+
+So the swap breaks when the new container declares a volume at the old path:
+it gets data in a format it cannot read, it does not start, and everything
+that waits for it with `depends_on: condition: service_healthy` stays down.
+The same applies to any engine swap that changes the on-disk format.
+
+First decide what the old volume holds. All of the following discard it, which
+is fine for a cache; PHP sessions stored there go with it, so every user logs in
+again. A store with durable records or queue data needs a verified backup and an
+engine-specific migration first.
+
+Give the new engine a fresh volume, any of:
+
+- rename the service (`redis` → `valkey`): a new service gets new anonymous
+  volumes. Update everything that uses the old name, `depends_on` entries and
+  clients such as `REDIS_HOST: valkey`, or give the service a `redis` network
+  alias. Remove the old container with `--remove-orphans`, or with
+  `docker rm -fv <old-container>` to delete its anonymous volume as well;
+- keep the name and run `docker compose up -d -V --no-deps <service>` for that
+  deploy. Name the service: a bare `-V` renews the anonymous volumes of every
+  service it recreates, and a database without a mounted data directory would
+  start empty;
+- mount a named volume or bind mount and empty it deliberately.
+
+## Healthcheck probes inside minimal images
+
+A healthcheck runs inside the container, with that image's tools. Two traps
+after moving a service to Alpine:
+
+- **No `curl`.** Bare `alpine` and many images built on it carry only busybox
+  `wget`, whereas `nginx:alpine` and `php:8.4-fpm-alpine` do ship `curl`.
+  Check the image with `docker run --rm --entrypoint sh <image> -c 'command -v curl'`.
+  Where it is missing, a probe `["CMD", "curl", ...]` fails with
+  `executable file not found`, the container stays `unhealthy`, and a reverse
+  proxy that skips unhealthy containers (the Traefik Docker provider does)
+  removes its route.
+- **`localhost` is IPv6 first.** busybox `wget http://localhost/` tries `::1`
+  first and reports `Connection refused` when the server listens on IPv4 only
+  (`listen 80;` in nginx). Probe the address the server listens on, `127.0.0.1`
+  for an IPv4 listener.
+
+```yaml
+healthcheck:
+  # Nextcloud's status.php runs through the FastCGI location, so the probe covers nginx and php-fpm.
+  test: ["CMD", "wget", "-Y", "off", "-q", "-O", "/dev/null", "http://127.0.0.1/status.php"]
+```
+
+`-Y off` keeps the probe local. busybox `wget` uses `http_proxy` from the
+container's environment and ignores `no_proxy`: with
+`http_proxy=http://10.255.255.1:3128` and `no_proxy=127.0.0.1` in `nginx:alpine`,
+`wget http://127.0.0.1/` hung on the proxy until `timeout 5` killed it, and
+`wget -Y off` got 200. GNU `wget` spells the option `--no-proxy`.
+
+Use an endpoint your application provides and that nginx passes to PHP. A path
+that does not exist answers 404 and marks a working container unhealthy; a file
+nginx serves statically stays healthy with php-fpm down. With several nginx
+server blocks the probe reaches the default one, so select the application's
+with `--header "Host: app.example"`.
+
+Read the probe's own output before changing the service:
+`docker inspect -f '{{range .State.Health.Log}}{{.ExitCode}} {{.Output}}{{end}}' <container>`.
