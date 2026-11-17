@@ -635,8 +635,8 @@
       },
       {
         "type": "content_regex",
-        "value": "docker (compose )?stop .{0,20}(-t|--time)",
-        "description": "Stops the running 10.6 container explicitly with enough time and checks the clean shutdown; stop_grace_period in the new file does not apply to it"
+        "value": "docker (compose )?stop .{0,20}(-t|--time)|docker compose up .{0,20}(-t|--timeout) ?[0-9]",
+        "description": "Gives the running 10.6 container enough time to stop, with docker stop -t or docker compose up -t; stop_grace_period in the new file does not apply to it"
       }
     ],
     "samples": {

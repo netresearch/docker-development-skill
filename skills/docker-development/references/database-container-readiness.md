@@ -174,6 +174,9 @@ database:
   without the value took 11 s with 25 s in the new file, the next recreate 26 s.
   So stop the old container with `docker stop -t 120` and confirm
   `Shutdown complete` in its log before starting the new image.
+  `docker compose up -d -t 120` also gives the old container that time
+  (measured with Compose 5.7.1: 31 s with `-t 30`, 11 s without), but it
+  starts the new image right away, with no chance to read the log in between.
 * **`stop_grace_period`** covers every stop after that, reboots included.
 
 After the start, check `select version()`, the table count of the application

@@ -169,20 +169,31 @@ whole Docker API, and on a rootful daemon that means control of the host. Run
 only a scheduler you trust with that access, or put a restricted Docker API
 proxy in front of the socket when the stacks must not reach each other.
 
-## Swapping the image keeps the anonymous volume
+## Swapping the image can keep the anonymous volume
 
-An image that declares `VOLUME` (`/data` in the Redis and Valkey images,
-`/var/lib/mysql` in MariaDB) gets an anonymous volume when the compose file
-mounts nothing there. Recreating the container keeps that volume: Compose
-reattaches the previous container's anonymous volumes to its replacement,
-including when only the `image:` changed.
+Recreating a container keeps its anonymous volumes: Compose reattaches the
+previous container's anonymous volume at a path to its replacement, also when
+only the `image:` changed. It does so only for a path where the new container
+declares a volume, either through `VOLUME` in the new image or through an
+anonymous entry such as `volumes: [/data]` in the compose file.
 
-So replacing Redis with Valkey under the same service name hands Valkey the
-old `/data/dump.rdb`. Redis 8 writes RDB versions Valkey does not load by
-default (per Valkey's migration docs, not observed here); the container then
-fails to start, and everything that waits for it with
-`depends_on: condition: service_healthy` stays down. The same applies to any
-engine swap that changes the on-disk format.
+Whether an image declares `VOLUME` differs between tags. `mariadb` declares
+`/var/lib/mysql`. `redis:7` and `redis:8.0` declare `/data`; `redis:8` and
+`valkey/valkey:9` declare nothing. Check before the swap:
+`docker image inspect <image> --format '{{json .Config.Volumes}}'`.
+
+Measured with Compose 5.7.1, `redis:8.0` with a saved key, then the same
+service switched to `valkey/valkey:9`:
+
+| compose file for the new image | `/data` in the Valkey container |
+|---|---|
+| no `volumes:` | no mount; Valkey starts empty |
+| `volumes: [/data]` | the old volume; Valkey exits with `Can't handle RDB format version 12` |
+
+So the swap breaks when the new container declares a volume at the old path:
+it gets data in a format it cannot read, it does not start, and everything
+that waits for it with `depends_on: condition: service_healthy` stays down.
+The same applies to any engine swap that changes the on-disk format.
 
 First decide what the old volume holds. All of the following discard it, which
 is fine for a cache; PHP sessions stored there go with it, so every user logs in
@@ -207,10 +218,13 @@ Give the new engine a fresh volume, any of:
 A healthcheck runs inside the container, with that image's tools. Two traps
 after moving a service to Alpine:
 
-- **No `curl`.** Alpine images carry busybox `wget`, not `curl`. A probe
-  `["CMD", "curl", ...]` fails with `executable file not found`, the container
-  stays `unhealthy`, and a reverse proxy that skips unhealthy containers (the
-  Traefik Docker provider does) removes its route.
+- **No `curl`.** Bare `alpine` and many images built on it carry only busybox
+  `wget`, whereas `nginx:alpine` and `php:8.4-fpm-alpine` do ship `curl`.
+  Check the image with `docker run --rm --entrypoint sh <image> -c 'command -v curl'`.
+  Where it is missing, a probe `["CMD", "curl", ...]` fails with
+  `executable file not found`, the container stays `unhealthy`, and a reverse
+  proxy that skips unhealthy containers (the Traefik Docker provider does)
+  removes its route.
 - **`localhost` is IPv6 first.** busybox `wget http://localhost/` tries `::1`
   first and reports `Connection refused` when the server listens on IPv4 only
   (`listen 80;` in nginx). Probe the address the server listens on, `127.0.0.1`

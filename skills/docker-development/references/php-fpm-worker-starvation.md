@@ -77,6 +77,9 @@ upstream server temporarily disabled while reading response header from upstream
 no live upstreams while connecting to upstream
 ```
 
+nginx logs `upstream server temporarily disabled` at level `warn`. The official
+nginx image logs from `notice` up; an `error_log` set to `error` hides that line.
+
 The client whose request overflows gets a 502. Once every address of the
 upstream has been disabled that way, **every** client gets 502 until
 `fail_timeout` runs out, healthchecks included. A browser reaches that state on
