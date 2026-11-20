@@ -137,7 +137,8 @@ docker run -v /var/run/docker.sock:/var/run/docker.sock myimage
 
 **Bind-mount paths are resolved on the host.** The host daemon interprets every
 `-v`/`--mount` source path, so a file the calling container created in its own
-filesystem (its `/tmp`, say) does not exist for it. The error then points the
+filesystem (its `/tmp`, say) does not exist for it, and where the same path
+exists on the host, the host's file is mounted instead without an error. The error then points the
 wrong way: with a missing source, `-v` creates an empty root-owned directory at
 that path on the host, and mounting it onto a file in the image fails with
 `not a directory: Are you trying to mount a directory onto a file (or

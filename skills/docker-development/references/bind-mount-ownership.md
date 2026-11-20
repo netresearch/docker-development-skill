@@ -148,12 +148,13 @@ the second one mounts it. Keep the writer running while the reader looks
 (measured on Docker Engine 29.9.2):
 
 ```bash
-docker volume create --driver local --opt type=tmpfs --opt device=tmpfs \
-  --opt o=size=8m probe-tmpfs
-docker run -d --name probe-writer -v probe-tmpfs:/s alpine sleep 300
+# an unnamed volume, so the probe can never reuse or delete an existing one
+VOL=$(docker volume create --driver local --opt type=tmpfs --opt device=tmpfs \
+  --opt o=size=8m)
+docker run -d --name probe-writer -v "$VOL":/s alpine sleep 300
 docker exec probe-writer sh -c 'echo shared > /s/f'
-docker run --rm -v probe-tmpfs:/s alpine cat /s/f    # prints: shared
+docker run --rm -v "$VOL":/s alpine cat /s/f    # prints: shared
 docker rm -f probe-writer
-docker run --rm -v probe-tmpfs:/s alpine ls -A /s    # prints nothing
-docker volume rm probe-tmpfs
+docker run --rm -v "$VOL":/s alpine ls -A /s    # prints nothing
+docker volume rm "$VOL"
 ```
