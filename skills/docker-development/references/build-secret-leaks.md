@@ -65,6 +65,49 @@ Rotation is the only remedy that acts on what is already published — the
 attestations of existing versions keep their copy of the value forever, or until
 someone deletes those package versions. Rotate first, fix the build second.
 
+For a GitLab personal access token (`glpat-`), let the leaked value tell you
+which token it is instead of guessing from token names, then rotate it with an
+explicit expiry. Without `expires_at`, GitLab gives the rotated token one week
+([API docs](https://docs.gitlab.com/api/personal_access_tokens/)). Keep both
+tokens off the command line and out of the terminal: `read -rs` prompts without
+echo, `printf` is a shell builtin, and curl reads the header from standard
+input.
+
+```bash
+set -o pipefail
+GITLAB=https://gitlab.example.com/api/v4
+read -rsp 'Leaked token: ' LEAKED; echo
+
+# 1. Which token is it? (id, owner, scopes, current expiry)
+printf 'PRIVATE-TOKEN: %s\n' "$LEAKED" \
+  | curl --fail-with-body -sS --proto '=https' --header @- \
+      "$GITLAB/personal_access_tokens/self" \
+  | jq '{id, name, user_id, scopes, expires_at}'
+
+# 2. Rotate it: the old value is revoked, the response carries the new one.
+#    Authenticate as the token's owner (or an administrator), not with the
+#    leaked value, and store the new token before doing anything else.
+read -rsp 'Owner token: ' OWNER; echo
+NEW=$(printf 'PRIVATE-TOKEN: %s\n' "$OWNER" \
+  | curl --fail-with-body -sS --proto '=https' --header @- --request POST \
+      --data 'expires_at=2027-05-31' \
+      "$GITLAB/personal_access_tokens/<id>/rotate" \
+  | jq -er .token) || { echo 'rotation failed' >&2; exit 1; }
+printf '%s' "$NEW" \
+  | vault kv put secret/ci/composer-auth token=-   # or your store's stdin write
+
+# 3. Confirm the leaked value is dead: expect HTTP 401
+printf 'PRIVATE-TOKEN: %s\n' "$LEAKED" \
+  | curl -sS --proto '=https' --header @- -o /dev/null -w '%{http_code}\n' \
+      "$GITLAB/personal_access_tokens/self"
+unset LEAKED OWNER NEW
+```
+
+Then update every consumer of the old value (CI variables, the build secret)
+from the store. A token that holds the `api` or `self_rotate` scope can also
+rotate itself through `POST /personal_access_tokens/self/rotate`; project,
+group and deploy tokens have their own endpoints.
+
 ## The other leak: your own debugging session
 
 A leak does not need buildx provenance to happen. `docker build --progress=plain`
