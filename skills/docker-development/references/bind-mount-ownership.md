@@ -121,3 +121,40 @@ visible:
 ```bash
 docker compose exec web cat /proc/mounts
 ```
+
+## Related Gotcha: A tmpfs-Backed Named Volume Lives Only While Mounted
+
+A named volume with the `local` driver and `type: tmpfs` is the usual carrier
+for such a socket:
+
+```yaml
+volumes:
+  php-fpm-socket:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: "size=8m,mode=0755"
+```
+
+It behaves unlike a disk-backed volume. Containers that run **at the same
+time** share its content: a file one writes, the other sees. The content is
+gone once the **last** container using the volume stops, so no stale socket
+survives a restart of the whole stack. Recreating only the writer while the
+reader keeps running is fine; the reader then sees the new file.
+
+That makes the obvious probe wrong. Two sequential `docker run --rm` calls
+always report "not shared": the first container's exit empties the tmpfs before
+the second one mounts it. Keep the writer running while the reader looks
+(measured on Docker Engine 29.9.2):
+
+```bash
+# an unnamed volume, so the probe can never reuse or delete an existing one
+VOL=$(docker volume create --driver local --opt type=tmpfs --opt device=tmpfs \
+  --opt o=size=8m)
+docker run -d --name probe-writer -v "$VOL":/s alpine sleep 300
+docker exec probe-writer sh -c 'echo shared > /s/f'
+docker run --rm -v "$VOL":/s alpine cat /s/f    # prints: shared
+docker rm -f probe-writer
+docker run --rm -v "$VOL":/s alpine ls -A /s    # prints nothing
+docker volume rm "$VOL"
+```
